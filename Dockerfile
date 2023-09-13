@@ -1,4 +1,4 @@
-FROM golang:1.21.0 as build
+FROM golang:1.21.1 as build
 WORKDIR /root/
 RUN mkdir -p /root/tgzeposter/
 COPY tgzeposter.go go.mod go.sum /root/tgzeposter/
