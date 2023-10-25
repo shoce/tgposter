@@ -1,4 +1,5 @@
 /*
+
 https://core.telegram.org/bots/api/
 https://core.telegram.org/bots/api/#formatting-options
 
@@ -6,7 +7,8 @@ go mod init github.com/shoce/tgzeposter
 go get -a -u -v
 go mod tidy
 
-GoFmt GoBuildNull GoPublish
+GoFmt
+GoBuildNull
 
 */
 

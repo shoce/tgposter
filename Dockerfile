@@ -1,4 +1,6 @@
-FROM golang:1.21.1 as build
+
+# https://hub.docker.com/_/golang/tags
+FROM golang:1.21.3 as build
 WORKDIR /root/
 RUN mkdir -p /root/tgzeposter/
 COPY tgzeposter.go go.mod go.sum /root/tgzeposter/
@@ -10,7 +12,8 @@ RUN go build -o tgzeposter tgzeposter.go
 RUN ls -l -a
 
 
-FROM alpine:3.18.0
+# https://hub.docker.com/_/alpine/tags
+FROM alpine:3.18.4
 RUN apk add --no-cache tzdata
 RUN apk add --no-cache gcompat && ln -s -f -v ld-linux-x86-64.so.2 /lib/libresolv.so.2
 RUN mkdir -p /opt/tgzeposter/
