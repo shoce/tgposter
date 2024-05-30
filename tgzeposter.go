@@ -56,7 +56,9 @@ var (
 	ABookOfDaysPath     string
 	ABookOfDaysLast     string
 	ABookOfDaysTgChatId int64
-	ABookOfDaysRe       *regexp.Regexp
+
+	ABookOfDaysReTemplate string
+	ABookOfDaysRe         *regexp.Regexp
 
 	ACourseInMiraclesWorkbookPath     string
 	ACourseInMiraclesWorkbookLast     string
@@ -126,36 +128,35 @@ func postJson(url string, data *bytes.Buffer, target interface{}) error {
 	return nil
 }
 
-func GetVar(name string) (value string) {
+func GetVar(name string) (value string, err error) {
 	//log("DEBUG GetVar: %s", name)
-
-	var err error
 
 	value = os.Getenv(name)
 	if value != "" {
-		return value
+		return value, nil
 	}
 
 	if YamlConfigPath != "" {
 		value, err = YamlGet(name)
 		if err != nil {
 			log("WARNING GetVar YamlGet %s: %v", name, err)
+			return "", err
 		}
 		if value != "" {
-			return value
+			return value, nil
 		}
 	}
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		if v, err := KvGet(name); err != nil {
 			log("WARNING GetVar KvGet %s: %v", name, err)
-			return ""
+			return "", err
 		} else {
 			value = v
 		}
 	}
 
-	return value
+	return value, nil
 }
 
 func SetVar(name, value string) (err error) {
@@ -316,88 +317,106 @@ func init() {
 		log("WARNING: YamlConfigPath empty")
 	}
 
-	KvToken = GetVar("KvToken")
+	KvToken, err = GetVar("KvToken")
 	if KvToken == "" {
 		log("WARNING: KvToken empty")
 	}
 
-	KvAccountId = GetVar("KvAccountId")
+	KvAccountId, err = GetVar("KvAccountId")
 	if KvAccountId == "" {
 		log("WARNING: KvAccountId empty")
 	}
 
-	KvNamespaceId = GetVar("KvNamespaceId")
+	KvNamespaceId, err = GetVar("KvNamespaceId")
 	if KvNamespaceId == "" {
 		log("WARNING: KvNamespaceId empty")
 	}
 
 	Ctx = context.TODO()
 
-	TgToken = GetVar("TgToken")
+	TgToken, err = GetVar("TgToken")
 	if TgToken == "" {
-		log("ERROR: TgToken empty")
+		log("ERROR TgToken empty")
 		os.Exit(1)
 	}
 
-	if GetVar("TgZeChatId") == "" {
-		log("ERROR: TgZeChatId empty")
+	if tgzechatid, err := GetVar("TgZeChatId"); err != nil {
+		log("ERROR GetVar(TgZeChatId): %v", err)
+		os.Exit(1)
+	} else if tgzechatid == "" {
+		log("ERROR TgZeChatId empty")
 		os.Exit(1)
 	} else {
-		TgZeChatId, err = strconv.ParseInt(GetVar("TgZeChatId"), 10, 0)
+		TgZeChatId, err = strconv.ParseInt(tgzechatid, 10, 0)
 		if err != nil {
-			log("ERROR: invalid TgZeChatId: %v", err)
+			log("ERROR invalid TgZeChatId: %v", err)
 			os.Exit(1)
 		}
 	}
 
-	if GetVar("MoonPhaseTgChatId") == "" {
+	if moonphasetgchatid, err := GetVar("MoonPhaseTgChatId"); err != nil {
+		log("ERROR GetVar(MoonPhaseTgChatId): %v", err)
+		os.Exit(1)
+	} else if moonphasetgchatid == "" {
 		MoonPhaseTgChatId = TgZeChatId
 	} else {
-		MoonPhaseTgChatId, err = strconv.ParseInt(GetVar("MoonPhaseTgChatId"), 10, 0)
-		if err != nil {
-			log("ERROR: invalid MoonPhaseTgChatId: %v", err)
+		if moonphasetgchatid, err := GetVar("MoonPhaseTgChatId"); err != nil {
+			log("ERROR GetVar(MoonPhaseTgChatId): %v", err)
 			os.Exit(1)
-		}
-	}
-	MoonPhaseTodayLast = GetVar("MoonPhaseTodayLast")
-
-	if GetVar("ABookOfDaysPath") != "" {
-		ABookOfDaysPath = GetVar("ABookOfDaysPath")
-		if GetVar("ABookOfDaysRe") == "" {
-			log("ABookOfDaysRe env is empty")
-			os.Exit(1)
-		} else {
-			ABookOfDaysRe = regexp.MustCompile(GetVar("ABookOfDaysRe"))
-		}
-		if GetVar("ABookOfDaysTgChatId") == "" {
-			log("ABookOfDaysTgChatId env is empty")
-			os.Exit(1)
-		}
-	}
-	ABookOfDaysLast = GetVar("ABookOfDaysLast")
-	if GetVar("ABookOfDaysTgChatId") != "" {
-		ABookOfDaysTgChatId, err = strconv.ParseInt(GetVar("ABookOfDaysTgChatId"), 10, 0)
-		if err != nil {
-			log("ERROR: invalid ABookOfDaysTgChatId: %v", err)
+		} else if MoonPhaseTgChatId, err = strconv.ParseInt(moonphasetgchatid, 10, 0); err != nil {
+			log("ERROR invalid MoonPhaseTgChatId: %v", err)
 			os.Exit(1)
 		}
 	}
 
-	if GetVar("ACourseInMiraclesWorkbookPath") != "" {
-		ACourseInMiraclesWorkbookPath = GetVar("ACourseInMiraclesWorkbookPath")
-		if GetVar("ACourseInMiraclesWorkbookTgChatId") == "" {
-			log("ACourseInMiraclesWorkbookTgChatId env is empty")
-			os.Exit(1)
-		}
+	if MoonPhaseTodayLast, err = GetVar("MoonPhaseTodayLast"); err != nil {
+		log("ERROR GetVar(MoonPhaseTodayLast): %v", err)
+		os.Exit(1)
+	}
+
+	if ABookOfDaysPath, err = GetVar("ABookOfDaysPath"); err != nil {
+		log("ERROR GetVar(ABookOfDaysPath): %v", err)
+		os.Exit(1)
+	}
+	if ABookOfDaysReTemplate, err = GetVar("ABookOfDaysRe"); err != nil {
+		log("ERROR GetVar(ABookOfDaysRe): %v", err)
+		os.Exit(1)
+	} else if ABookOfDaysReTemplate == "" && ABookOfDaysPath != "" {
+		log("ERROR ABookOfDaysRe env var is empty")
+		os.Exit(1)
+	}
+	ABookOfDaysLast, err = GetVar("ABookOfDaysLast")
+	if err != nil {
+		log("ERROR GetVar(ABookOfDaysLast): %v", err)
+		os.Exit(1)
+	}
+	if abookofdaystgchatid, err := GetVar("ABookOfDaysTgChatId"); err != nil {
+		log("ERROR GetVar(ABookOfDaysTgChatId): %v", err)
+		os.Exit(1)
+	} else if abookofdaystgchatid == "" && ABookOfDaysPath != "" {
+		log("ERROR ABookOfDaysTgChatId env var is empty")
+		os.Exit(1)
+	} else if ABookOfDaysTgChatId, err = strconv.ParseInt(abookofdaystgchatid, 10, 0); err != nil {
+		log("ERROR invalid ABookOfDaysTgChatId: %v", err)
+		os.Exit(1)
+	}
+
+	if ACourseInMiraclesWorkbookPath, err = GetVar("ACourseInMiraclesWorkbookPath"); err != nil {
+		log("ERROR GetVar(ACourseInMiraclesWorkbookPath): %v", err)
+		os.Exit(1)
 	}
 	ACourseInMiraclesWorkbookRe = regexp.MustCompile(ACourseInMiraclesWorkbookReString)
-	ACourseInMiraclesWorkbookLast = GetVar("ACourseInMiraclesWorkbookLast")
-	if GetVar("ACourseInMiraclesWorkbookTgChatId") != "" {
-		ACourseInMiraclesWorkbookTgChatId, err = strconv.ParseInt(GetVar("ACourseInMiraclesWorkbookTgChatId"), 10, 0)
-		if err != nil {
-			log("ERROR: invalid ACourseInMiraclesWorkbookTgChatId: %v", err)
-			os.Exit(1)
-		}
+	if ACourseInMiraclesWorkbookLast, err = GetVar("ACourseInMiraclesWorkbookLast"); err != nil {
+		log("ERROR GetVar(ACourseInMiraclesWorkbookLast): %v", err)
+		os.Exit(1)
+	}
+	if acourseinmiraclesworkbooktgchatid, err := GetVar("ACourseInMiraclesWorkbookTgChatId"); err != nil {
+	} else if acourseinmiraclesworkbooktgchatid == "" && ACourseInMiraclesWorkbookPath != "" {
+		log("ACourseInMiraclesWorkbookTgChatId env var is empty")
+		os.Exit(1)
+	} else if ACourseInMiraclesWorkbookTgChatId, err = strconv.ParseInt(acourseinmiraclesworkbooktgchatid, 10, 0); err != nil {
+		log("ERROR invalid ACourseInMiraclesWorkbookTgChatId '%s': %v", acourseinmiraclesworkbooktgchatid, err)
+		os.Exit(1)
 	}
 }
 
@@ -515,10 +534,12 @@ func PostABookOfDays() error {
 	}
 
 	monthday := time.Now().UTC().Format("January 2")
-	if GetVar("ABookOfDaysRe") == "" {
-		return fmt.Errorf("ABookOfDaysRe env is empty")
+	if ABookOfDaysReTemplate == "" {
+		return fmt.Errorf("ABookOfDaysRe env var is empty")
+	} else {
+		abookofdaysre := strings.ReplaceAll(ABookOfDaysReTemplate, "monthday", monthday)
+		ABookOfDaysRe = regexp.MustCompile(abookofdaysre)
 	}
-	ABookOfDaysRe := regexp.MustCompile(strings.ReplaceAll(GetVar("ABookOfDaysRe"), "monthday", monthday))
 	abodtoday := ABookOfDaysRe.FindString(abod)
 	abodtoday = strings.TrimSpace(abodtoday)
 	if abodtoday == "" {
