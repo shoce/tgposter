@@ -1,11 +1,18 @@
 ---
+
+DEBUG: false
+
 YamlConfigPath: tgposter.yaml
+
+Interval: 11m
+
 KvToken: ""
 KvAccountId: ""
 KvNamespaceId: ""
+
 TgToken: ""
 TgChatId: ""
-Interval: 11m
+
 ImageNameTgPoster: ghcr.io/shoce/tgposter
 ImageTagTgPoster: ""
 

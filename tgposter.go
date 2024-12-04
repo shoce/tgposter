@@ -38,6 +38,8 @@ const (
 )
 
 var (
+	DEBUG bool
+
 	YamlConfigPath = "tgposter.yaml"
 
 	KvToken       string
@@ -95,7 +97,12 @@ func init() {
 		log("WARNING: KvNamespaceId empty")
 	}
 
-	if s, err := GetVar("Interval"); s != "" {
+	if s, _ := GetVar("DEBUG"); s != "" {
+		DEBUG = true
+		log("DEBUG:true")
+	}
+
+	if s, _ := GetVar("Interval"); s != "" {
 		Interval, err = time.ParseDuration(s)
 		if err != nil {
 			log("ERROR time.ParseDuration Interval:`%s`: %v", s, err)
@@ -469,29 +476,26 @@ func postJson(url string, data *bytes.Buffer, target interface{}) error {
 }
 
 func GetVar(name string) (value string, err error) {
-	//log("DEBUG GetVar: %s", name)
-
-	value = os.Getenv(name)
-	if value != "" {
-		return value, nil
+	if DEBUG {
+		log("DEBUG GetVar `%s`", name)
 	}
 
+	value = os.Getenv(name)
+
 	if YamlConfigPath != "" {
-		value, err = YamlGet(name)
-		if err != nil {
-			log("WARNING GetVar YamlGet %s: %v", name, err)
+		if v, err := YamlGet(name); err != nil {
+			log("WARNING GetVar YamlGet `%s`: %v", name, err)
 			return "", err
-		}
-		if value != "" {
-			return value, nil
+		} else if v != "" {
+			value = v
 		}
 	}
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		if v, err := KvGet(name); err != nil {
-			log("WARNING GetVar KvGet %s: %v", name, err)
+			log("WARNING GetVar KvGet `%s`: %v", name, err)
 			return "", err
-		} else {
+		} else if v != "" {
 			value = v
 		}
 	}
