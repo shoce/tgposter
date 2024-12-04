@@ -219,17 +219,17 @@ func main() {
 
 		err = PostMoonPhaseToday()
 		if err != nil {
-			log("WARNING: PostMoonPhaseToday: %v", err)
+			log("WARNING PostMoonPhaseToday: %v", err)
 		}
 
 		err = PostABookOfDays()
 		if err != nil {
-			log("WARNING: PostABookOfDays: %v", err)
+			log("WARNING PostABookOfDays: %v", err)
 		}
 
 		err = PostACourseInMiraclesWorkbook()
 		if err != nil {
-			log("WARNING: PostACourseInMiraclesWorkbook: %v", err)
+			log("WARNING PostACourseInMiraclesWorkbook: %v", err)
 		}
 
 		if dur := time.Now().Sub(t0); dur < Interval {

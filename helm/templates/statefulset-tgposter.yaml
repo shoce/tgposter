@@ -16,10 +16,10 @@ spec:
         app: tgposter
     spec:
       containers:
-      - name: tgposter
-        imagePullPolicy: IfNotPresent
-        image: "{{ $.Values.ImageNameTgPoster }}:{{ $.Values.ImageTagTgPoster }}"
-        envFrom:
-          - configMapRef:
-              name: tgposter
+        - name: tgposter
+          imagePullPolicy: IfNotPresent
+          image: "{{ $.Values.ImageNameTgPoster }}:{{ $.Values.ImageTagTgPoster }}"
+          envFrom:
+            - configMapRef:
+                name: tgposter
 
