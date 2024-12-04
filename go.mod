@@ -1,4 +1,4 @@
-module github.com/shoce/tgzeposter
+module github.com/shoce/tgposter
 
 go 1.22
 

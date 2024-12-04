@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tgposter
+data:
+  YamlConfigPath: "{{ $.Values.YamlConfigPath }}"
+  Interval: "{{ $.Values.Interval }}"
+  KvToken: "{{ $.Values.KvToken }}"
+  KvAccountId: "{{ $.Values.KvAccountId }}"
+  KvNamespaceId: "{{ $.Values.KvNamespaceId }}"
+  TgToken: "{{ $.Values.TgToken }}"
+  TgChatId: "{{ $.Values.TgChatId }}"
+
