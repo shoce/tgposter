@@ -435,13 +435,16 @@ func PostMoonPhaseToday() error {
 	return nil
 }
 
-func log(msg interface{}, args ...interface{}) {
+func ts() string {
 	t := time.Now().Local()
-	ts := fmt.Sprintf(
-		"%03dy."+"%02d%02dd."+"%02dh"+"%02dm.",
+	return fmt.Sprintf(
+		"%03d."+"%02d%02d."+"%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
-	msgtext := fmt.Sprintf("%s %s", ts, msg) + NL
+}
+
+func log(msg interface{}, args ...interface{}) {
+	msgtext := fmt.Sprintf("%s %s", ts(), msg) + NL
 	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
@@ -525,7 +528,9 @@ func GetVar(name string) (value string, err error) {
 }
 
 func SetVar(name, value string) (err error) {
-	//log("DEBUG SetVar: %s: %s", name, value)
+	if DEBUG {
+		log("DEBUG SetVar: %s: %s", name, value)
+	}
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		err = KvSet(name, value)
