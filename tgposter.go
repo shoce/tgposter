@@ -198,20 +198,25 @@ func init() {
 	}
 
 	if ACourseInMiraclesWorkbookPath, err = GetVar("ACourseInMiraclesWorkbookPath"); err != nil {
-		log("ERROR GetVar(ACourseInMiraclesWorkbookPath): %v", err)
+		log("ERROR GetVar ACourseInMiraclesWorkbookPath: %w", err)
 		os.Exit(1)
 	}
-	ACourseInMiraclesWorkbookRe = regexp.MustCompile(ACourseInMiraclesWorkbookReString)
+	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(ACourseInMiraclesWorkbookReString); err != nil {
+		log("ERROR invalid ACourseInMiraclesWorkbookRe `%s`: %w", ACourseInMiraclesWorkbookReString, err)
+		os.Exit(1)
+	}
 	if ACourseInMiraclesWorkbookLast, err = GetVar("ACourseInMiraclesWorkbookLast"); err != nil {
-		log("ERROR GetVar(ACourseInMiraclesWorkbookLast): %v", err)
+		log("ERROR GetVar ACourseInMiraclesWorkbookLast: %w", err)
 		os.Exit(1)
 	}
-	if acourseinmiraclesworkbooktgchatid, err := GetVar("ACourseInMiraclesWorkbookTgChatId"); err != nil {
-	} else if acourseinmiraclesworkbooktgchatid == "" && ACourseInMiraclesWorkbookPath != "" {
+	if v, err := GetVar("ACourseInMiraclesWorkbookTgChatId"); err != nil {
+		log("ERROR GetVar ACourseInMiraclesWorkbookTgChatId: %w", err)
+		os.Exit(1)
+	} else if v == "" && ACourseInMiraclesWorkbookPath != "" {
 		log("ACourseInMiraclesWorkbookTgChatId env var is empty")
 		os.Exit(1)
-	} else if ACourseInMiraclesWorkbookTgChatId, err = strconv.ParseInt(acourseinmiraclesworkbooktgchatid, 10, 0); err != nil {
-		log("ERROR invalid ACourseInMiraclesWorkbookTgChatId '%s': %v", acourseinmiraclesworkbooktgchatid, err)
+	} else if ACourseInMiraclesWorkbookTgChatId, err = strconv.ParseInt(v, 10, 0); err != nil {
+		log("ERROR invalid ACourseInMiraclesWorkbookTgChatId '%s': %w", v, err)
 		os.Exit(1)
 	}
 }
