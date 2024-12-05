@@ -55,6 +55,8 @@ var (
 	TgToken  string
 	TgChatId int64
 
+	PostingStartHour int
+
 	MoonPhaseTgChatId  int64
 	MoonPhaseTodayLast string
 
@@ -122,64 +124,76 @@ func init() {
 		os.Exit(1)
 	}
 
-	if tgzechatid, err := GetVar("TgChatId"); err != nil {
-		log("ERROR GetVar(TgChatId): %v", err)
+	if v, err := GetVar("TgChatId"); err != nil {
+		log("ERROR GetVar(TgChatId): %w", err)
 		os.Exit(1)
-	} else if tgzechatid == "" {
+	} else if v == "" {
 		log("ERROR TgChatId empty")
 		os.Exit(1)
 	} else {
-		TgChatId, err = strconv.ParseInt(tgzechatid, 10, 0)
+		TgChatId, err = strconv.ParseInt(v, 10, 0)
 		if err != nil {
-			log("ERROR invalid TgChatId: %v", err)
+			log("ERROR invalid TgChatId: %w", err)
 			os.Exit(1)
 		}
 	}
 
-	if moonphasetgchatid, err := GetVar("MoonPhaseTgChatId"); err != nil {
-		log("ERROR GetVar(MoonPhaseTgChatId): %v", err)
+	if v, err := GetVar("PostingStartHour"); err != nil {
+		log("ERROR GetVar PostingStartHour: %w", err)
 		os.Exit(1)
-	} else if moonphasetgchatid == "" {
+	} else if v == "" {
+		log("ERROR PostingStartHour empty")
+		os.Exit(1)
+	} else {
+		if PostingStartHour, err = strconv.Atoi(v); err != nil {
+			log("ERROR invalid PostingStartHour: %w", err)
+			os.Exit(1)
+		} else if PostingStartHour < 0 || PostingStartHour > 23 {
+			log("ERROR invalid PostingStartHour `%d`: must be between 0 and 23", PostingStartHour)
+			os.Exit(1)
+		}
+	}
+
+	if v, err := GetVar("MoonPhaseTgChatId"); err != nil {
+		log("ERROR GetVar MoonPhaseTgChatId: %v", err)
+		os.Exit(1)
+	} else if v == "" {
 		MoonPhaseTgChatId = TgChatId
 	} else {
-		if moonphasetgchatid, err := GetVar("MoonPhaseTgChatId"); err != nil {
-			log("ERROR GetVar(MoonPhaseTgChatId): %v", err)
-			os.Exit(1)
-		} else if MoonPhaseTgChatId, err = strconv.ParseInt(moonphasetgchatid, 10, 0); err != nil {
-			log("ERROR invalid MoonPhaseTgChatId: %v", err)
+		if MoonPhaseTgChatId, err = strconv.ParseInt(v, 10, 0); err != nil {
+			log("ERROR invalid MoonPhaseTgChatId `%s`: %w", v, err)
 			os.Exit(1)
 		}
 	}
 
 	if MoonPhaseTodayLast, err = GetVar("MoonPhaseTodayLast"); err != nil {
-		log("ERROR GetVar(MoonPhaseTodayLast): %v", err)
+		log("ERROR GetVar MoonPhaseTodayLast: %w", err)
 		os.Exit(1)
 	}
 
 	if ABookOfDaysPath, err = GetVar("ABookOfDaysPath"); err != nil {
-		log("ERROR GetVar(ABookOfDaysPath): %v", err)
+		log("ERROR GetVar ABookOfDaysPath: %w", err)
 		os.Exit(1)
 	}
 	if ABookOfDaysReTemplate, err = GetVar("ABookOfDaysRe"); err != nil {
-		log("ERROR GetVar(ABookOfDaysRe): %v", err)
+		log("ERROR GetVar ABookOfDaysRe: %w", err)
 		os.Exit(1)
 	} else if ABookOfDaysReTemplate == "" && ABookOfDaysPath != "" {
 		log("ERROR ABookOfDaysRe env var is empty")
 		os.Exit(1)
 	}
-	ABookOfDaysLast, err = GetVar("ABookOfDaysLast")
-	if err != nil {
-		log("ERROR GetVar(ABookOfDaysLast): %v", err)
+	if ABookOfDaysLast, err = GetVar("ABookOfDaysLast"); err != nil {
+		log("ERROR GetVar ABookOfDaysLast: %w", err)
 		os.Exit(1)
 	}
-	if abookofdaystgchatid, err := GetVar("ABookOfDaysTgChatId"); err != nil {
-		log("ERROR GetVar(ABookOfDaysTgChatId): %v", err)
+	if v, err := GetVar("ABookOfDaysTgChatId"); err != nil {
+		log("ERROR GetVar ABookOfDaysTgChatId: %w", err)
 		os.Exit(1)
-	} else if abookofdaystgchatid == "" && ABookOfDaysPath != "" {
+	} else if v == "" && ABookOfDaysPath != "" {
 		log("ERROR ABookOfDaysTgChatId env var is empty")
 		os.Exit(1)
-	} else if ABookOfDaysTgChatId, err = strconv.ParseInt(abookofdaystgchatid, 10, 0); err != nil {
-		log("ERROR invalid ABookOfDaysTgChatId: %v", err)
+	} else if ABookOfDaysTgChatId, err = strconv.ParseInt(v, 10, 0); err != nil {
+		log("ERROR invalid ABookOfDaysTgChatId `%s`: %w", v, err)
 		os.Exit(1)
 	}
 
@@ -240,7 +254,7 @@ func main() {
 }
 
 func PostACourseInMiraclesWorkbook() error {
-	if ACourseInMiraclesWorkbookPath == "" || time.Now().UTC().Hour() < 4 {
+	if ACourseInMiraclesWorkbookPath == "" || time.Now().UTC().Hour() < PostingStartHour {
 		return nil
 	}
 
@@ -339,25 +353,27 @@ func PostACourseInMiraclesWorkbook() error {
 }
 
 func PostABookOfDays() error {
-	if ABookOfDaysPath == "" || time.Now().UTC().Hour() < 4 {
+	if ABookOfDaysPath == "" || time.Now().UTC().Hour() < PostingStartHour {
 		return nil
+	}
+
+	if ABookOfDaysReTemplate == "" {
+		return fmt.Errorf("ABookOfDaysRe env var is empty")
 	}
 
 	abodbb, err := ioutil.ReadFile(ABookOfDaysPath)
 	if err != nil {
 		return fmt.Errorf("ReadFile ABookOfDaysPath=`%s`: %v", ABookOfDaysPath, err)
 	}
-	abod := string(abodbb)
+	abod := strings.TrimSpace(string(abodbb))
 	if abod == "" {
 		return fmt.Errorf("Empty file ABookOfDaysPath=`%s`", ABookOfDaysPath)
 	}
 
 	monthday := time.Now().UTC().Format("January 2")
-	if ABookOfDaysReTemplate == "" {
-		return fmt.Errorf("ABookOfDaysRe env var is empty")
-	} else {
-		abookofdaysre := strings.ReplaceAll(ABookOfDaysReTemplate, "monthday", monthday)
-		ABookOfDaysRe = regexp.MustCompile(abookofdaysre)
+	abookofdaysre := strings.ReplaceAll(ABookOfDaysReTemplate, "monthday", monthday)
+	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
+		return err
 	}
 	abodtoday := ABookOfDaysRe.FindString(abod)
 	abodtoday = strings.TrimSpace(abodtoday)
@@ -388,7 +404,7 @@ func PostABookOfDays() error {
 func PostMoonPhaseToday() error {
 	var err error
 
-	if time.Now().UTC().Hour() < 4 {
+	if time.Now().UTC().Hour() < PostingStartHour {
 		return nil
 	}
 
