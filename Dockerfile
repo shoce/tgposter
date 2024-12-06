@@ -18,8 +18,8 @@ RUN apk add --no-cache tzdata
 RUN apk add --no-cache gcompat && ln -s -f -v ld-linux-x86-64.so.2 /lib/libresolv.so.2
 RUN mkdir -p /opt/tgposter/
 COPY A.Book.of.Days.text A.Course.in.Miracles.text /opt/tgposter/
-COPY --from=build /root/tgposter/tgposter /opt/tgposter/tgposter
 RUN ls -l -a /opt/tgposter/
+COPY --from=build /root/tgposter/tgposter /bin/tgposter
 WORKDIR /opt/tgposter/
-ENTRYPOINT ["./tgposter"]
+ENTRYPOINT ["/bin/tgposter"]
 
