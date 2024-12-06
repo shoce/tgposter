@@ -368,15 +368,19 @@ func PostABookOfDays() error {
 
 	abodbb, err := ioutil.ReadFile(ABookOfDaysPath)
 	if err != nil {
-		return fmt.Errorf("ReadFile ABookOfDaysPath=`%s`: %v", ABookOfDaysPath, err)
+		return fmt.Errorf("ReadFile ABookOfDaysPath `%s`: %v", ABookOfDaysPath, err)
 	}
 	abod := strings.TrimSpace(string(abodbb))
 	if abod == "" {
-		return fmt.Errorf("Empty file ABookOfDaysPath=`%s`", ABookOfDaysPath)
+		return fmt.Errorf("Empty file ABookOfDaysPath `%s`", ABookOfDaysPath)
 	}
 
 	monthday := time.Now().UTC().Format("January 2")
 	abookofdaysre := strings.ReplaceAll(ABookOfDaysReTemplate, "monthday", monthday)
+	if DEBUG {
+		log("DEBUG monthday:`%s`", monthday)
+		log("DEBUG abookofdaysre:`%s`", abookofdaysre)
+	}
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
 		return err
 	}
@@ -387,7 +391,9 @@ func PostABookOfDays() error {
 		return nil
 	}
 
-	//log("abodtoday:\n%s", abodtoday)
+	if DEBUG {
+		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
+	}
 
 	if monthday == ABookOfDaysLast {
 		return nil
@@ -395,12 +401,12 @@ func PostABookOfDays() error {
 
 	_, err = tgsendMessage(abodtoday, ABookOfDaysTgChatId, "MarkdownV2")
 	if err != nil {
-		return fmt.Errorf("tgsendMessage: %v", err)
+		return fmt.Errorf("tgsendMessage: %w", err)
 	}
 
 	err = SetVar("ABookOfDaysLast", monthday)
 	if err != nil {
-		return fmt.Errorf("SetVar ABookOfDaysLast: %v", err)
+		return fmt.Errorf("SetVar ABookOfDaysLast: %w", err)
 	}
 
 	return nil
@@ -529,7 +535,7 @@ func GetVar(name string) (value string, err error) {
 
 func SetVar(name, value string) (err error) {
 	if DEBUG {
-		log("DEBUG SetVar: %s: %s", name, value)
+		log("DEBUG SetVar: `%s`: `%s`", name, value)
 	}
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
