@@ -376,9 +376,16 @@ func PostABookOfDays() error {
 	}
 
 	monthday := time.Now().UTC().Format("January 2")
-	abookofdaysre := strings.ReplaceAll(ABookOfDaysReTemplate, "monthday", monthday)
 	if DEBUG {
 		log("DEBUG monthday:`%s`", monthday)
+	}
+
+	if monthday == ABookOfDaysLast {
+		return nil
+	}
+
+	abookofdaysre := strings.ReplaceAll(ABookOfDaysReTemplate, "monthday", monthday)
+	if DEBUG {
 		log("DEBUG abookofdaysre:`%s`", abookofdaysre)
 	}
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
@@ -395,16 +402,13 @@ func PostABookOfDays() error {
 		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
 	}
 
-	if monthday == ABookOfDaysLast {
-		return nil
-	}
-
 	_, err = tgsendMessage(abodtoday, ABookOfDaysTgChatId, "MarkdownV2")
 	if err != nil {
 		return fmt.Errorf("tgsendMessage: %w", err)
 	}
 
-	err = SetVar("ABookOfDaysLast", monthday)
+	ABookOfDaysLast = monthday
+	err = SetVar("ABookOfDaysLast", ABookOfDaysLast)
 	if err != nil {
 		return fmt.Errorf("SetVar ABookOfDaysLast: %w", err)
 	}
