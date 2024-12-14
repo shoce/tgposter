@@ -437,7 +437,8 @@ func PostMoonPhaseToday() error {
 		}
 	}
 
-	err = SetVar("MoonPhaseTodayLast", yearmonthday)
+	MoonPhaseTodayLast = yearmonthday
+	err = SetVar("MoonPhaseTodayLast", MoonPhaseTodayLast)
 	if err != nil {
 		return fmt.Errorf("SetVar MoonPhaseTodayLast: %v", err)
 	}
