@@ -1,6 +1,6 @@
 
 # https://hub.docker.com/_/golang/tags
-FROM golang:1.23.4 as build
+FROM golang:1.23.4 AS build
 WORKDIR /root/
 RUN mkdir -p /root/tgposter/
 COPY tgposter.go go.mod go.sum /root/tgposter/

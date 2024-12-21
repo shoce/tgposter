@@ -457,7 +457,6 @@ func log(msg interface{}, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
-
 func MoonPhaseCalendar() string {
 	nmfm := []string{"○", "●"}
 	const MoonCycleDur time.Duration = 2551443 * time.Second
@@ -545,9 +544,9 @@ func tgsendMessage(text string, chatid int64, parsemode string) (msg *TgMessage,
 		text = strings.ReplaceAll(text, "__", `\_\_`)
 	}
 	sendMessage := TgSendMessageRequest{
-		ChatId:                  chatid,
-		Text:                     text,
-		ParseMode:               parsemode,
+		ChatId:                fmt.Sprintf("%d", chatid),
+		Text:                  text,
+		ParseMode:             parsemode,
 		DisableWebPagePreview: true,
 	}
 	sendMessageJSON, err := json.Marshal(sendMessage)
