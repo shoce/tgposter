@@ -3,9 +3,7 @@
 https://core.telegram.org/bots/api/
 https://core.telegram.org/bots/api/#formatting-options
 
-go get -u -v
-go mod tidy
-
+GoGet
 GoFmt
 GoBuildNull
 
@@ -459,6 +457,56 @@ func log(msg interface{}, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
+
+func MoonPhaseCalendar() string {
+	nmfm := []string{"○", "●"}
+	const MoonCycleDur time.Duration = 2551443 * time.Second
+	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
+	var sinceNM time.Duration = time.Since(NewMoon) % MoonCycleDur
+	var lastNM time.Time = time.Now().UTC().Add(-sinceNM)
+	var msg, year, month string
+	var mo time.Time = lastNM
+	for i := 0; mo.Before(lastNM.Add(time.Hour * 24 * 7 * 54)); i++ {
+		if mo.Format("2006") != year {
+			year = mo.Format("2006")
+			msg += NL + NL + fmt.Sprintf("Year %s", year) + NL
+		}
+		if mo.Format("Jan") != month {
+			month = mo.Format("Jan")
+			msg += NL + fmt.Sprintf("%s ", month)
+		}
+		msg += fmt.Sprintf(
+			"%s:%s ",
+			mo.Add(-4*time.Hour).Format("Mon/2"),
+			nmfm[i%2],
+		)
+		mo = mo.Add(MoonCycleDur / 2)
+	}
+	return msg
+}
+
+func MoonPhaseToday() string {
+	const MoonCycleDur time.Duration = 2551443 * time.Second
+	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
+	var sinceNew time.Duration = time.Since(NewMoon) % MoonCycleDur
+	var tnow time.Time = time.Now().UTC()
+	if tillNew := MoonCycleDur - sinceNew; tillNew < 24*time.Hour {
+		return fmt.Sprintf(
+			"Today %s is New Moon; next Full Moon is on %s.",
+			tnow.Format("Monday, January 2"),
+			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+		)
+	}
+	if tillFull := MoonCycleDur/2 - sinceNew; tillFull >= 0 && tillFull < 24*time.Hour {
+		return fmt.Sprintf(
+			"Today %s is Full Moon; next New Moon is on %s.",
+			tnow.Format("Monday, January 2"),
+			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+		)
+	}
+	return ""
+}
+
 type TgResponse struct {
 	Ok          bool       `json:"ok"`
 	Description string     `json:"description"`
@@ -473,6 +521,57 @@ type TgResponseShort struct {
 type TgMessage struct {
 	MessageId int64 `json:"message_id"`
 	Text      string
+}
+
+type TgSendMessageRequest struct {
+	ChatId                string `json:"chat_id"`
+	Text                  string `json:"text"`
+	ParseMode             string `json:"parse_mode,omitempty"`
+	DisableWebPagePreview bool   `json:"disable_web_page_preview"`
+	DisableNotification   bool   `json:"disable_notification"`
+}
+
+func tgsendMessage(text string, chatid int64, parsemode string) (msg *TgMessage, err error) {
+	// https://core.telegram.org/bots/api/#sendmessage
+	// https://core.telegram.org/bots/api/#formatting-options
+	if parsemode == "MarkdownV2" {
+		for _, c := range []string{`[`, `]`, `(`, `)`, `~`, "`", `>`, `#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`} {
+			text = strings.ReplaceAll(text, c, `\`+c)
+		}
+		text = strings.ReplaceAll(text, "______", `\_\_\_\_\_\_`)
+		text = strings.ReplaceAll(text, "_____", `\_\_\_\_\_`)
+		text = strings.ReplaceAll(text, "____", `\_\_\_\_`)
+		text = strings.ReplaceAll(text, "___", `\_\_\_`)
+		text = strings.ReplaceAll(text, "__", `\_\_`)
+	}
+	sendMessage := TgSendMessageRequest{
+		ChatId:                  chatid,
+		Text:                     text,
+		ParseMode:               parsemode,
+		DisableWebPagePreview: true,
+	}
+	sendMessageJSON, err := json.Marshal(sendMessage)
+	if err != nil {
+		return nil, err
+	}
+
+	var tgresp TgResponse
+	err = postJson(
+		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", TgToken),
+		bytes.NewBuffer(sendMessageJSON),
+		&tgresp,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if !tgresp.Ok {
+		return nil, fmt.Errorf("sendMessage: %s", tgresp.Description)
+	}
+
+	msg = tgresp.Result
+
+	return msg, nil
 }
 
 func getJson(url string, target interface{}) error {
@@ -686,96 +785,4 @@ func KvSet(name, value string) error {
 	}
 
 	return nil
-}
-
-func MoonPhaseCalendar() string {
-	nmfm := []string{"○", "●"}
-	const MoonCycleDur time.Duration = 2551443 * time.Second
-	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
-	var sinceNM time.Duration = time.Since(NewMoon) % MoonCycleDur
-	var lastNM time.Time = time.Now().UTC().Add(-sinceNM)
-	var msg, year, month string
-	var mo time.Time = lastNM
-	for i := 0; mo.Before(lastNM.Add(time.Hour * 24 * 7 * 54)); i++ {
-		if mo.Format("2006") != year {
-			year = mo.Format("2006")
-			msg += NL + NL + fmt.Sprintf("Year %s", year) + NL
-		}
-		if mo.Format("Jan") != month {
-			month = mo.Format("Jan")
-			msg += NL + fmt.Sprintf("%s ", month)
-		}
-		msg += fmt.Sprintf(
-			"%s:%s ",
-			mo.Add(-4*time.Hour).Format("Mon/2"),
-			nmfm[i%2],
-		)
-		mo = mo.Add(MoonCycleDur / 2)
-	}
-	return msg
-}
-
-func MoonPhaseToday() string {
-	const MoonCycleDur time.Duration = 2551443 * time.Second
-	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
-	var sinceNew time.Duration = time.Since(NewMoon) % MoonCycleDur
-	var tnow time.Time = time.Now().UTC()
-	if tillNew := MoonCycleDur - sinceNew; tillNew < 24*time.Hour {
-		return fmt.Sprintf(
-			"Today %s is New Moon; next Full Moon is on %s.",
-			tnow.Format("Monday, January 2"),
-			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
-		)
-	}
-	if tillFull := MoonCycleDur/2 - sinceNew; tillFull >= 0 && tillFull < 24*time.Hour {
-		return fmt.Sprintf(
-			"Today %s is Full Moon; next New Moon is on %s.",
-			tnow.Format("Monday, January 2"),
-			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
-		)
-	}
-	return ""
-}
-
-func tgsendMessage(text string, chatid int64, parsemode string) (msg *TgMessage, err error) {
-	// https://core.telegram.org/bots/api/#sendmessage
-	// https://core.telegram.org/bots/api/#formatting-options
-	if parsemode == "MarkdownV2" {
-		for _, c := range []string{`[`, `]`, `(`, `)`, `~`, "`", `>`, `#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`} {
-			text = strings.ReplaceAll(text, c, `\`+c)
-		}
-		text = strings.ReplaceAll(text, "______", `\_\_\_\_\_\_`)
-		text = strings.ReplaceAll(text, "_____", `\_\_\_\_\_`)
-		text = strings.ReplaceAll(text, "____", `\_\_\_\_`)
-		text = strings.ReplaceAll(text, "___", `\_\_\_`)
-		text = strings.ReplaceAll(text, "__", `\_\_`)
-	}
-	sendMessage := map[string]interface{}{
-		"chat_id":                  chatid,
-		"text":                     text,
-		"parse_mode":               parsemode,
-		"disable_web_page_preview": true,
-	}
-	sendMessageJSON, err := json.Marshal(sendMessage)
-	if err != nil {
-		return nil, err
-	}
-
-	var tgresp TgResponse
-	err = postJson(
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", TgToken),
-		bytes.NewBuffer(sendMessageJSON),
-		&tgresp,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if !tgresp.Ok {
-		return nil, fmt.Errorf("sendMessage: %s", tgresp.Description)
-	}
-
-	msg = tgresp.Result
-
-	return msg, nil
 }
