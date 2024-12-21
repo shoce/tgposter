@@ -51,23 +51,23 @@ var (
 	HttpClient = &http.Client{}
 
 	TgToken  string
-	TgChatId int64
+	TgChatId string
 
 	PostingStartHour int
 
-	MoonPhaseTgChatId  int64
+	MoonPhaseTgChatId  string
 	MoonPhaseTodayLast string
 
 	ABookOfDaysPath     string
 	ABookOfDaysLast     string
-	ABookOfDaysTgChatId int64
+	ABookOfDaysTgChatId string
 
 	ABookOfDaysReTemplate string
 	ABookOfDaysRe         *regexp.Regexp
 
 	ACourseInMiraclesWorkbookPath     string
 	ACourseInMiraclesWorkbookLast     string
-	ACourseInMiraclesWorkbookTgChatId int64
+	ACourseInMiraclesWorkbookTgChatId string
 	ACourseInMiraclesWorkbookReString = "^\\* LESSON "
 	ACourseInMiraclesWorkbookRe       *regexp.Regexp
 )
@@ -123,28 +123,24 @@ func init() {
 	}
 
 	if v, err := GetVar("TgChatId"); err != nil {
-		log("ERROR GetVar(TgChatId): %w", err)
+		log("ERROR GetVar(TgChatId): %v", err)
 		os.Exit(1)
 	} else if v == "" {
 		log("ERROR TgChatId empty")
 		os.Exit(1)
 	} else {
-		TgChatId, err = strconv.ParseInt(v, 10, 0)
-		if err != nil {
-			log("ERROR invalid TgChatId: %w", err)
-			os.Exit(1)
-		}
+		TgChatId = v
 	}
 
 	if v, err := GetVar("PostingStartHour"); err != nil {
-		log("ERROR GetVar PostingStartHour: %w", err)
+		log("ERROR GetVar PostingStartHour: %v", err)
 		os.Exit(1)
 	} else if v == "" {
 		log("ERROR PostingStartHour empty")
 		os.Exit(1)
 	} else {
 		if PostingStartHour, err = strconv.Atoi(v); err != nil {
-			log("ERROR invalid PostingStartHour: %w", err)
+			log("ERROR invalid PostingStartHour: %v", err)
 			os.Exit(1)
 		} else if PostingStartHour < 0 || PostingStartHour > 23 {
 			log("ERROR invalid PostingStartHour `%d`: must be between 0 and 23", PostingStartHour)
@@ -158,64 +154,59 @@ func init() {
 	} else if v == "" {
 		MoonPhaseTgChatId = TgChatId
 	} else {
-		if MoonPhaseTgChatId, err = strconv.ParseInt(v, 10, 0); err != nil {
-			log("ERROR invalid MoonPhaseTgChatId `%s`: %w", v, err)
-			os.Exit(1)
-		}
+		MoonPhaseTgChatId = v
 	}
 
 	if MoonPhaseTodayLast, err = GetVar("MoonPhaseTodayLast"); err != nil {
-		log("ERROR GetVar MoonPhaseTodayLast: %w", err)
+		log("ERROR GetVar MoonPhaseTodayLast: %v", err)
 		os.Exit(1)
 	}
 
 	if ABookOfDaysPath, err = GetVar("ABookOfDaysPath"); err != nil {
-		log("ERROR GetVar ABookOfDaysPath: %w", err)
+		log("ERROR GetVar ABookOfDaysPath: %v", err)
 		os.Exit(1)
 	}
 	if ABookOfDaysReTemplate, err = GetVar("ABookOfDaysRe"); err != nil {
-		log("ERROR GetVar ABookOfDaysRe: %w", err)
+		log("ERROR GetVar ABookOfDaysRe: %v", err)
 		os.Exit(1)
 	} else if ABookOfDaysReTemplate == "" && ABookOfDaysPath != "" {
 		log("ERROR ABookOfDaysRe env var is empty")
 		os.Exit(1)
 	}
 	if ABookOfDaysLast, err = GetVar("ABookOfDaysLast"); err != nil {
-		log("ERROR GetVar ABookOfDaysLast: %w", err)
+		log("ERROR GetVar ABookOfDaysLast: %v", err)
 		os.Exit(1)
 	}
 	if v, err := GetVar("ABookOfDaysTgChatId"); err != nil {
-		log("ERROR GetVar ABookOfDaysTgChatId: %w", err)
+		log("ERROR GetVar ABookOfDaysTgChatId: %v", err)
 		os.Exit(1)
 	} else if v == "" && ABookOfDaysPath != "" {
 		log("ERROR ABookOfDaysTgChatId env var is empty")
 		os.Exit(1)
-	} else if ABookOfDaysTgChatId, err = strconv.ParseInt(v, 10, 0); err != nil {
-		log("ERROR invalid ABookOfDaysTgChatId `%s`: %w", v, err)
-		os.Exit(1)
+	} else {
+		ABookOfDaysTgChatId = v
 	}
 
 	if ACourseInMiraclesWorkbookPath, err = GetVar("ACourseInMiraclesWorkbookPath"); err != nil {
-		log("ERROR GetVar ACourseInMiraclesWorkbookPath: %w", err)
+		log("ERROR GetVar ACourseInMiraclesWorkbookPath: %v", err)
 		os.Exit(1)
 	}
 	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(ACourseInMiraclesWorkbookReString); err != nil {
-		log("ERROR invalid ACourseInMiraclesWorkbookRe `%s`: %w", ACourseInMiraclesWorkbookReString, err)
+		log("ERROR invalid ACourseInMiraclesWorkbookRe `%s`: %v", ACourseInMiraclesWorkbookReString, err)
 		os.Exit(1)
 	}
 	if ACourseInMiraclesWorkbookLast, err = GetVar("ACourseInMiraclesWorkbookLast"); err != nil {
-		log("ERROR GetVar ACourseInMiraclesWorkbookLast: %w", err)
+		log("ERROR GetVar ACourseInMiraclesWorkbookLast: %v", err)
 		os.Exit(1)
 	}
 	if v, err := GetVar("ACourseInMiraclesWorkbookTgChatId"); err != nil {
-		log("ERROR GetVar ACourseInMiraclesWorkbookTgChatId: %w", err)
+		log("ERROR GetVar ACourseInMiraclesWorkbookTgChatId: %v", err)
 		os.Exit(1)
 	} else if v == "" && ACourseInMiraclesWorkbookPath != "" {
 		log("ACourseInMiraclesWorkbookTgChatId env var is empty")
 		os.Exit(1)
-	} else if ACourseInMiraclesWorkbookTgChatId, err = strconv.ParseInt(v, 10, 0); err != nil {
-		log("ERROR invalid ACourseInMiraclesWorkbookTgChatId '%s': %w", v, err)
-		os.Exit(1)
+	} else {
+		ACourseInMiraclesWorkbookTgChatId = v
 	}
 }
 
@@ -523,14 +514,14 @@ type TgMessage struct {
 }
 
 type TgSendMessageRequest struct {
-	ChatId                int64  `json:"chat_id"`
+	ChatId                string `json:"chat_id"`
 	Text                  string `json:"text"`
 	ParseMode             string `json:"parse_mode,omitempty"`
 	DisableWebPagePreview bool   `json:"disable_web_page_preview"`
 	DisableNotification   bool   `json:"disable_notification"`
 }
 
-func tgsendMessage(text string, chatid int64, parsemode string) (msg *TgMessage, err error) {
+func tgsendMessage(text string, chatid string, parsemode string) (msg *TgMessage, err error) {
 	// https://core.telegram.org/bots/api/#sendmessage
 	// https://core.telegram.org/bots/api/#formatting-options
 	if parsemode == "MarkdownV2" {
