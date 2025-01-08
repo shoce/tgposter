@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tgposter
+
+data:
+
+  YssUrl: "{{ $.Values.YssUrl }}"
+
+

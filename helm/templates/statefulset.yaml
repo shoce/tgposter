@@ -5,20 +5,25 @@ metadata:
   name: tgposter
   labels:
     app: tgposter
+
 spec:
+
   selector:
     matchLabels:
       app: tgposter
+
   template:
     metadata:
       name: tgposter
       labels:
         app: tgposter
     spec:
+
       containers:
+
         - name: tgposter
-          imagePullPolicy: IfNotPresent
           image: "{{ $.Values.ImageNameTgPoster }}:{{ $.Values.ImageTagTgPoster }}"
+          imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: tgposter

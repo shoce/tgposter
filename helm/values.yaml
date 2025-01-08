@@ -1,18 +1,8 @@
 ---
 
-DEBUG: false
-
-YamlConfigPath: tgposter.yaml
-
-Interval: 11m
-
-KvToken: ""
-KvAccountId: ""
-KvNamespaceId: ""
-
-TgToken: ""
-TgChatId: ""
-
 ImageNameTgPoster: ghcr.io/shoce/tgposter
 ImageTagTgPoster: ""
+
+YssUrl: https://yss/tgposter
+
 

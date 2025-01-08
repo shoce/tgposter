@@ -27,7 +27,6 @@ jobs:
       - name: version
         run: |
           VERSION=$( date '+%y.%m%d.%H%M' )
-          echo "VERSION:$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4

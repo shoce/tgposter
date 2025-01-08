@@ -18,195 +18,123 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	yaml "gopkg.in/yaml.v3"
 )
 
 const (
 	NL = "\n"
 )
 
+type TgPosterConfig struct {
+	YssUrl string `yaml:"-"`
+
+	DEBUG bool `yaml:"DEBUG"`
+
+	Interval time.Duration `yaml:"Interval"`
+
+	TgToken  string `yaml:"TgToken"`
+	TgChatId string `yaml:"TgChatId"`
+
+	PostingStartHour int `yaml:"PostingStartHour"`
+
+	MoonPhaseTgChatId  string `yaml:"MoonPhaseTgChatId"`
+	MoonPhaseTodayLast string `yaml:"MoonPhaseTodayLast"`
+
+	ABookOfDaysPath     string `yaml:"ABookOfDaysPath"`
+	ABookOfDaysLast     string `yaml:"ABookOfDaysLast"`
+	ABookOfDaysTgChatId string `yaml:"ABookOfDaysTgChatId"`
+
+	ABookOfDaysReTemplate string `yaml:"ABookOfDaysReTemplate"`
+
+	ACourseInMiraclesWorkbookPath     string `yaml:"ACourseInMiraclesWorkbookPath"`
+	ACourseInMiraclesWorkbookLast     string `yaml:"ACourseInMiraclesWorkbookLast"`
+	ACourseInMiraclesWorkbookTgChatId string `yaml:"ACourseInMiraclesWorkbookTgChatId"`
+	ACourseInMiraclesWorkbookReString string `yaml:"ACourseInMiraclesWorkbookReString"`
+}
+
 var (
-	DEBUG bool
-
-	YamlConfigPath = "tgposter.yaml"
-
-	KvToken       string
-	KvAccountId   string
-	KvNamespaceId string
-
-	Interval time.Duration
+	Config TgPosterConfig
 
 	Ctx context.Context
 
 	HttpClient = &http.Client{}
 
-	TgToken  string
-	TgChatId string
-
-	PostingStartHour int
-
-	MoonPhaseTgChatId  string
-	MoonPhaseTodayLast string
-
-	ABookOfDaysPath     string
-	ABookOfDaysLast     string
-	ABookOfDaysTgChatId string
-
-	ABookOfDaysReTemplate string
-	ABookOfDaysRe         *regexp.Regexp
-
-	ACourseInMiraclesWorkbookPath     string
-	ACourseInMiraclesWorkbookLast     string
-	ACourseInMiraclesWorkbookTgChatId string
-	ACourseInMiraclesWorkbookReString = "^\\* LESSON "
-	ACourseInMiraclesWorkbookRe       *regexp.Regexp
+	ABookOfDaysRe               *regexp.Regexp
+	ACourseInMiraclesWorkbookRe *regexp.Regexp
 )
 
 func init() {
 	var err error
 
-	if s := os.Getenv("YamlConfigPath"); s != "" {
-		YamlConfigPath = s
+	Ctx = context.TODO()
+
+	if s := os.Getenv("YssUrl"); s != "" {
+		Config.YssUrl = s
 	}
-	if YamlConfigPath == "" {
-		log("WARNING: YamlConfigPath empty")
+	if Config.YssUrl == "" {
+		log("ERROR YssUrl empty")
+		os.Exit(1)
 	}
 
-	KvToken, err = GetVar("KvToken")
-	if KvToken == "" {
-		log("WARNING: KvToken empty")
+	if err := Config.Get(); err != nil {
+		log("ERROR Config.Get: %v", err)
+		os.Exit(1)
 	}
 
-	KvAccountId, err = GetVar("KvAccountId")
-	if KvAccountId == "" {
-		log("WARNING: KvAccountId empty")
+	if Config.DEBUG {
+		log("DEBUG==true")
 	}
 
-	KvNamespaceId, err = GetVar("KvNamespaceId")
-	if KvNamespaceId == "" {
-		log("WARNING: KvNamespaceId empty")
-	}
-
-	if s, _ := GetVar("DEBUG"); s != "" {
-		DEBUG = true
-		log("DEBUG:true")
-	}
-
-	if s, _ := GetVar("Interval"); s != "" {
-		Interval, err = time.ParseDuration(s)
-		if err != nil {
-			log("ERROR time.ParseDuration Interval:`%s`: %v", s, err)
-			os.Exit(1)
-		}
-		log("Interval: %v", Interval)
-	} else {
+	log("Interval: %v", Config.Interval)
+	if Config.Interval == 0 {
 		log("ERROR Interval empty")
 		os.Exit(1)
 	}
 
-	Ctx = context.TODO()
-
-	TgToken, err = GetVar("TgToken")
-	if TgToken == "" {
+	if Config.TgToken == "" {
 		log("ERROR TgToken empty")
 		os.Exit(1)
 	}
 
-	if v, err := GetVar("TgChatId"); err != nil {
-		log("ERROR GetVar(TgChatId): %v", err)
-		os.Exit(1)
-	} else if v == "" {
+	if Config.TgChatId == "" {
 		log("ERROR TgChatId empty")
 		os.Exit(1)
-	} else {
-		TgChatId = v
 	}
 
-	if v, err := GetVar("PostingStartHour"); err != nil {
-		log("ERROR GetVar PostingStartHour: %v", err)
-		os.Exit(1)
-	} else if v == "" {
-		log("ERROR PostingStartHour empty")
-		os.Exit(1)
-	} else {
-		if PostingStartHour, err = strconv.Atoi(v); err != nil {
-			log("ERROR invalid PostingStartHour: %v", err)
-			os.Exit(1)
-		} else if PostingStartHour < 0 || PostingStartHour > 23 {
-			log("ERROR invalid PostingStartHour `%d`: must be between 0 and 23", PostingStartHour)
-			os.Exit(1)
-		}
-	}
-
-	if v, err := GetVar("MoonPhaseTgChatId"); err != nil {
-		log("ERROR GetVar MoonPhaseTgChatId: %v", err)
-		os.Exit(1)
-	} else if v == "" {
-		MoonPhaseTgChatId = TgChatId
-	} else {
-		MoonPhaseTgChatId = v
-	}
-
-	if MoonPhaseTodayLast, err = GetVar("MoonPhaseTodayLast"); err != nil {
-		log("ERROR GetVar MoonPhaseTodayLast: %v", err)
+	if Config.PostingStartHour < 0 || Config.PostingStartHour > 23 {
+		log("ERROR invalid PostingStartHour %d: must be between 0 and 23", Config.PostingStartHour)
 		os.Exit(1)
 	}
 
-	if ABookOfDaysPath, err = GetVar("ABookOfDaysPath"); err != nil {
-		log("ERROR GetVar ABookOfDaysPath: %v", err)
-		os.Exit(1)
-	}
-	if ABookOfDaysReTemplate, err = GetVar("ABookOfDaysRe"); err != nil {
-		log("ERROR GetVar ABookOfDaysRe: %v", err)
-		os.Exit(1)
-	} else if ABookOfDaysReTemplate == "" && ABookOfDaysPath != "" {
-		log("ERROR ABookOfDaysRe env var is empty")
-		os.Exit(1)
-	}
-	if ABookOfDaysLast, err = GetVar("ABookOfDaysLast"); err != nil {
-		log("ERROR GetVar ABookOfDaysLast: %v", err)
-		os.Exit(1)
-	}
-	if v, err := GetVar("ABookOfDaysTgChatId"); err != nil {
-		log("ERROR GetVar ABookOfDaysTgChatId: %v", err)
-		os.Exit(1)
-	} else if v == "" && ABookOfDaysPath != "" {
-		log("ERROR ABookOfDaysTgChatId env var is empty")
-		os.Exit(1)
-	} else {
-		ABookOfDaysTgChatId = v
+	if Config.MoonPhaseTgChatId == "" {
+		Config.MoonPhaseTgChatId = Config.TgChatId
 	}
 
-	if ACourseInMiraclesWorkbookPath, err = GetVar("ACourseInMiraclesWorkbookPath"); err != nil {
-		log("ERROR GetVar ACourseInMiraclesWorkbookPath: %v", err)
+	if Config.ABookOfDaysReTemplate == "" && Config.ABookOfDaysPath != "" {
+		log("ERROR ABookOfDaysReTemplate is empty")
 		os.Exit(1)
 	}
-	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(ACourseInMiraclesWorkbookReString); err != nil {
-		log("ERROR invalid ACourseInMiraclesWorkbookRe `%s`: %v", ACourseInMiraclesWorkbookReString, err)
+
+	if Config.ABookOfDaysTgChatId == "" && Config.ABookOfDaysPath != "" {
+		log("ERROR ABookOfDaysTgChatId is empty")
 		os.Exit(1)
 	}
-	if ACourseInMiraclesWorkbookLast, err = GetVar("ACourseInMiraclesWorkbookLast"); err != nil {
-		log("ERROR GetVar ACourseInMiraclesWorkbookLast: %v", err)
+
+	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(Config.ACourseInMiraclesWorkbookReString); err != nil {
+		log("ERROR invalid ACourseInMiraclesWorkbookReString `%s`: %v", Config.ACourseInMiraclesWorkbookReString, err)
 		os.Exit(1)
 	}
-	if v, err := GetVar("ACourseInMiraclesWorkbookTgChatId"); err != nil {
-		log("ERROR GetVar ACourseInMiraclesWorkbookTgChatId: %v", err)
+	if Config.ACourseInMiraclesWorkbookTgChatId == "" && Config.ACourseInMiraclesWorkbookPath != "" {
+		log("ACourseInMiraclesWorkbookTgChatId is empty")
 		os.Exit(1)
-	} else if v == "" && ACourseInMiraclesWorkbookPath != "" {
-		log("ACourseInMiraclesWorkbookTgChatId env var is empty")
-		os.Exit(1)
-	} else {
-		ACourseInMiraclesWorkbookTgChatId = v
 	}
 }
 
@@ -217,7 +145,7 @@ func main() {
 	signal.Notify(sigterm, syscall.SIGTERM)
 	go func(sigterm chan os.Signal) {
 		<-sigterm
-		tgsendMessage(fmt.Sprintf("%s: sigterm", os.Args[0]), TgChatId, "")
+		tgsendMessage(fmt.Sprintf("%s: sigterm", os.Args[0]), Config.TgChatId, "")
 		log("sigterm received")
 		os.Exit(1)
 	}(sigterm)
@@ -240,20 +168,20 @@ func main() {
 			log("WARNING PostACourseInMiraclesWorkbook: %v", err)
 		}
 
-		if dur := time.Now().Sub(t0); dur < Interval {
-			time.Sleep(Interval - dur)
+		if dur := time.Now().Sub(t0); dur < Config.Interval {
+			time.Sleep(Config.Interval - dur)
 		}
 	}
 
 }
 
 func PostACourseInMiraclesWorkbook() error {
-	if ACourseInMiraclesWorkbookPath == "" || time.Now().UTC().Hour() < PostingStartHour {
+	if Config.ACourseInMiraclesWorkbookPath == "" || time.Now().UTC().Hour() < Config.PostingStartHour {
 		return nil
 	}
 
-	if time.Now().UTC().Month() == 3 && time.Now().UTC().Day() == 1 && ACourseInMiraclesWorkbookLast != "* LESSON 1 *" {
-		ACourseInMiraclesWorkbookLast = ""
+	if time.Now().UTC().Month() == 3 && time.Now().UTC().Day() == 1 && Config.ACourseInMiraclesWorkbookLast != "* LESSON 1 *" {
+		Config.ACourseInMiraclesWorkbookLast = ""
 	}
 
 	var ty0 time.Time
@@ -265,13 +193,13 @@ func PostACourseInMiraclesWorkbook() error {
 	daynum := time.Since(ty0)/(24*time.Hour) + 1
 	daynums := fmt.Sprintf(" %d ", daynum)
 
-	acimwbbb, err := ioutil.ReadFile(ACourseInMiraclesWorkbookPath)
+	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
 	if err != nil {
-		return fmt.Errorf("ReadFile ACourseInMiraclesWorkbookPath=`%s`: %v", ACourseInMiraclesWorkbookPath, err)
+		return fmt.Errorf("ReadFile ACourseInMiraclesWorkbookPath=`%s`: %v", Config.ACourseInMiraclesWorkbookPath, err)
 	}
 	acimwb := string(acimwbbb)
 	if acimwb == "" {
-		return fmt.Errorf("Empty file ACourseInMiraclesWorkbookPath=`%s`", ACourseInMiraclesWorkbookPath)
+		return fmt.Errorf("Empty file ACourseInMiraclesWorkbookPath=`%s`", Config.ACourseInMiraclesWorkbookPath)
 	}
 	acimwbss := strings.Split(acimwb, "\n\n\n\n")
 
@@ -286,18 +214,18 @@ func PostACourseInMiraclesWorkbook() error {
 		log("ACourseInMiraclesWorkbook texts of 4000+ length: %s", strings.Join(longis, ", "))
 	*/
 
-	if strings.Contains(ACourseInMiraclesWorkbookLast, daynums) {
+	if strings.Contains(Config.ACourseInMiraclesWorkbookLast, daynums) {
 		return nil
 	}
 
 	var skip bool
-	if ACourseInMiraclesWorkbookLast != "" {
+	if Config.ACourseInMiraclesWorkbookLast != "" {
 		skip = true
 	}
 
 	for _, s := range acimwbss {
 		st := strings.Split(s, "\n")[0]
-		if st == ACourseInMiraclesWorkbookLast {
+		if st == Config.ACourseInMiraclesWorkbookLast {
 			skip = false
 			continue
 		}
@@ -325,17 +253,17 @@ func PostACourseInMiraclesWorkbook() error {
 			if i > 0 {
 				message = st + " (continued)\n\n" + sp
 			}
-			_, err = tgsendMessage(message, ACourseInMiraclesWorkbookTgChatId, "MarkdownV2")
+			_, err = tgsendMessage(message, Config.ACourseInMiraclesWorkbookTgChatId, "MarkdownV2")
 			if err != nil {
 				return fmt.Errorf("tgsendMessage: %v", err)
 			}
 		}
 
-		ACourseInMiraclesWorkbookLast = st
+		Config.ACourseInMiraclesWorkbookLast = st
 
-		err = SetVar("ACourseInMiraclesWorkbookLast", ACourseInMiraclesWorkbookLast)
+		err = Config.Put()
 		if err != nil {
-			return fmt.Errorf("SetVar ACourseInMiraclesWorkbookLast: %v", err)
+			return fmt.Errorf("ERROR Config.Put: %v", err)
 		}
 
 		if ACourseInMiraclesWorkbookRe.MatchString(st) {
@@ -347,34 +275,34 @@ func PostACourseInMiraclesWorkbook() error {
 }
 
 func PostABookOfDays() error {
-	if ABookOfDaysPath == "" || time.Now().UTC().Hour() < PostingStartHour {
+	if Config.ABookOfDaysPath == "" || time.Now().UTC().Hour() < Config.PostingStartHour {
 		return nil
 	}
 
-	if ABookOfDaysReTemplate == "" {
-		return fmt.Errorf("ABookOfDaysRe env var is empty")
+	if Config.ABookOfDaysReTemplate == "" {
+		return fmt.Errorf("ABookOfDaysReTemplate is empty")
 	}
 
-	abodbb, err := ioutil.ReadFile(ABookOfDaysPath)
+	abodbb, err := ioutil.ReadFile(Config.ABookOfDaysPath)
 	if err != nil {
-		return fmt.Errorf("ReadFile ABookOfDaysPath `%s`: %v", ABookOfDaysPath, err)
+		return fmt.Errorf("ReadFile ABookOfDaysPath `%s`: %v", Config.ABookOfDaysPath, err)
 	}
 	abod := strings.TrimSpace(string(abodbb))
 	if abod == "" {
-		return fmt.Errorf("Empty file ABookOfDaysPath `%s`", ABookOfDaysPath)
+		return fmt.Errorf("Empty file ABookOfDaysPath `%s`", Config.ABookOfDaysPath)
 	}
 
 	monthday := time.Now().UTC().Format("January 2")
-	if DEBUG {
+	if Config.DEBUG {
 		log("DEBUG monthday:`%s`", monthday)
 	}
 
-	if monthday == ABookOfDaysLast {
+	if monthday == Config.ABookOfDaysLast {
 		return nil
 	}
 
-	abookofdaysre := strings.ReplaceAll(ABookOfDaysReTemplate, "monthday", monthday)
-	if DEBUG {
+	abookofdaysre := strings.ReplaceAll(Config.ABookOfDaysReTemplate, "monthday", monthday)
+	if Config.DEBUG {
 		log("DEBUG abookofdaysre:`%s`", abookofdaysre)
 	}
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
@@ -387,19 +315,19 @@ func PostABookOfDays() error {
 		return nil
 	}
 
-	if DEBUG {
+	if Config.DEBUG {
 		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
 	}
 
-	_, err = tgsendMessage(abodtoday, ABookOfDaysTgChatId, "MarkdownV2")
+	_, err = tgsendMessage(abodtoday, Config.ABookOfDaysTgChatId, "MarkdownV2")
 	if err != nil {
 		return fmt.Errorf("tgsendMessage: %w", err)
 	}
 
-	ABookOfDaysLast = monthday
-	err = SetVar("ABookOfDaysLast", ABookOfDaysLast)
+	Config.ABookOfDaysLast = monthday
+	err = Config.Put()
 	if err != nil {
-		return fmt.Errorf("SetVar ABookOfDaysLast: %w", err)
+		return fmt.Errorf("ERROR Config.Put: %w", err)
 	}
 
 	return nil
@@ -408,28 +336,28 @@ func PostABookOfDays() error {
 func PostMoonPhaseToday() error {
 	var err error
 
-	if time.Now().UTC().Hour() < PostingStartHour {
+	if time.Now().UTC().Hour() < Config.PostingStartHour {
 		return nil
 	}
 
 	moonphase := MoonPhaseToday()
 
 	yearmonthday := time.Now().UTC().Format("2006 January 2")
-	if yearmonthday == MoonPhaseTodayLast {
+	if yearmonthday == Config.MoonPhaseTodayLast {
 		return nil
 	}
 
 	if moonphase != "" {
-		_, err = tgsendMessage(moonphase, MoonPhaseTgChatId, "MarkdownV2")
+		_, err = tgsendMessage(moonphase, Config.MoonPhaseTgChatId, "MarkdownV2")
 		if err != nil {
 			return fmt.Errorf("tgsendMessage: %v", err)
 		}
 	}
 
-	MoonPhaseTodayLast = yearmonthday
-	err = SetVar("MoonPhaseTodayLast", MoonPhaseTodayLast)
+	Config.MoonPhaseTodayLast = yearmonthday
+	err = Config.Put()
 	if err != nil {
-		return fmt.Errorf("SetVar MoonPhaseTodayLast: %v", err)
+		return fmt.Errorf("ERROR Config.Put: %v", err)
 	}
 
 	return nil
@@ -547,7 +475,7 @@ func tgsendMessage(text string, chatid string, parsemode string) (msg *TgMessage
 
 	var tgresp TgResponse
 	err = postJson(
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", TgToken),
+		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", Config.TgToken),
 		bytes.NewBuffer(sendMessageJSON),
 		&tgresp,
 	)
@@ -599,179 +527,57 @@ func postJson(url string, data *bytes.Buffer, target interface{}) error {
 	return nil
 }
 
-func GetVar(name string) (value string, err error) {
-	if DEBUG {
-		log("DEBUG GetVar `%s`", name)
-	}
-
-	value = os.Getenv(name)
-
-	if YamlConfigPath != "" {
-		if v, err := YamlGet(name); err != nil {
-			log("WARNING GetVar YamlGet `%s`: %v", name, err)
-			return "", err
-		} else if v != "" {
-			value = v
-		}
-	}
-
-	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
-		if v, err := KvGet(name); err != nil {
-			log("WARNING GetVar KvGet `%s`: %v", name, err)
-			return "", err
-		} else if v != "" {
-			value = v
-		}
-	}
-
-	return value, nil
-}
-
-func SetVar(name, value string) (err error) {
-	if DEBUG {
-		log("DEBUG SetVar: `%s`: `%s`", name, value)
-	}
-
-	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
-		err = KvSet(name, value)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if YamlConfigPath != "" {
-		err = YamlSet(name, value)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	return fmt.Errorf("not kv credentials nor yaml config path provided to save to")
-}
-
-func YamlGet(name string) (value string, err error) {
-	configf, err := os.Open(YamlConfigPath)
+func (config *TgPosterConfig) Get() error {
+	req, err := http.NewRequest(http.MethodGet, config.YssUrl, nil)
 	if err != nil {
-		//log("WARNING: os.Open config file %s: %v", YamlConfigPath, err)
-		if os.IsNotExist(err) {
-			return "", nil
-		}
-		return "", err
-	}
-	defer configf.Close()
-
-	configm := make(map[interface{}]interface{})
-	if err = yaml.NewDecoder(configf).Decode(&configm); err != nil {
-		//log("WARNING: yaml.Decode %s: %v", YamlConfigPath, err)
-		return "", err
-	}
-
-	if v, ok := configm[name]; ok == true {
-		switch v.(type) {
-		case string:
-			value = v.(string)
-		case int:
-			value = fmt.Sprintf("%d", v.(int))
-		default:
-			return "", fmt.Errorf("yaml value of unsupported type, only string and int types are supported")
-		}
-	}
-
-	return value, nil
-}
-
-func YamlSet(name, value string) error {
-	configf, err := os.Open(YamlConfigPath)
-	if err == nil {
-		configm := make(map[interface{}]interface{})
-		err := yaml.NewDecoder(configf).Decode(&configm)
-		if err != nil {
-			log("WARNING: yaml.Decode %s: %v", YamlConfigPath, err)
-		}
-		configf.Close()
-		configm[name] = value
-		configf, err := os.Create(YamlConfigPath)
-		if err == nil {
-			defer configf.Close()
-			confige := yaml.NewEncoder(configf)
-			err := confige.Encode(configm)
-			if err == nil {
-				confige.Close()
-				configf.Close()
-			} else {
-				log("WARNING: yaml.Encoder.Encode: %v", err)
-				return err
-			}
-		} else {
-			log("WARNING: os.Create config file %s: %v", YamlConfigPath, err)
-			return err
-		}
-	} else {
-		log("WARNING: os.Open config file %s: %v", YamlConfigPath, err)
 		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("yss response status %s", resp.Status)
+	}
+
+	rbb, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(rbb, config); err != nil {
+		return err
+	}
+
+	if config.DEBUG {
+		log("DEBUG Config.Get: %+v", config)
 	}
 
 	return nil
 }
 
-func KvGet(name string) (value string, err error) {
-	req, err := http.NewRequest(
-		"GET",
-		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, name),
-		nil,
-	)
-	if err != nil {
-		return "", err
+func (config *TgPosterConfig) Put() error {
+	if config.DEBUG {
+		log("DEBUG Config.Put %s %+v", config.YssUrl, config)
 	}
 
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", KvToken))
-	resp, err := HttpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("kv api response status: %s", resp.Status)
-	}
-
-	if rbb, err := io.ReadAll(resp.Body); err != nil {
-		return "", err
-	} else {
-		value = string(rbb)
-	}
-
-	return value, nil
-}
-
-func KvSet(name, value string) error {
-	mpbb := new(bytes.Buffer)
-	mpw := multipart.NewWriter(mpbb)
-	if err := mpw.WriteField("metadata", "{}"); err != nil {
-		return err
-	}
-	if err := mpw.WriteField("value", value); err != nil {
-		return err
-	}
-	mpw.Close()
-
-	req, err := http.NewRequest(
-		"PUT",
-		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, name),
-		mpbb,
-	)
+	rbb, err := yaml.Marshal(config)
 	if err != nil {
 		return err
 	}
 
-	req.Header.Set("Content-Type", mpw.FormDataContentType())
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", KvToken))
-	resp, err := HttpClient.Do(req)
+	req, err := http.NewRequest(http.MethodPut, config.YssUrl, bytes.NewBuffer(rbb))
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("kv api response status: %s", resp.Status)
+		return fmt.Errorf("yss response status %s", resp.Status)
 	}
 
 	return nil
