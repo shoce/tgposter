@@ -1,8 +1,10 @@
 ---
 apiVersion: v1
 kind: ConfigMap
+
 metadata:
   name: tgposter
+  namespace: {{ $.Release.Namespace }}
 
 data:
 

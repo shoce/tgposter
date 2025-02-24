@@ -1,7 +1,7 @@
 ---
 
-ImageNameTgPoster: ghcr.io/shoce/tgposter
-ImageTagTgPoster: ""
+ImageNameGithubTgPoster: ghcr.io/shoce/tgposter
+ImageTagGithubTgPoster: ""
 
 YssUrl: https://yss/tgposter
 

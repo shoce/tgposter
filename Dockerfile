@@ -1,6 +1,6 @@
 
 # https://hub.docker.com/_/golang/tags
-FROM golang:1.23.5 AS build
+FROM golang:1.23.6 AS build
 ENV CGO_ENABLED=0
 WORKDIR /root/
 RUN mkdir -p /root/tgposter/
