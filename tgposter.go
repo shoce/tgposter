@@ -14,7 +14,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,6 +26,8 @@ import (
 	"time"
 
 	yaml "gopkg.in/yaml.v3"
+
+	"github.com/shoce/tg"
 )
 
 const (
@@ -145,8 +146,7 @@ func main() {
 	signal.Notify(sigterm, syscall.SIGTERM)
 	go func(sigterm chan os.Signal) {
 		<-sigterm
-		tgsendMessage(fmt.Sprintf("%s: sigterm", os.Args[0]), Config.TgChatId, "")
-		log("sigterm received")
+		tglog("%s: sigterm", os.Args[0])
 		os.Exit(1)
 	}(sigterm)
 
@@ -253,9 +253,18 @@ func PostACourseInMiraclesWorkbook() error {
 			if i > 0 {
 				message = st + " (continued)\n\n" + sp
 			}
-			_, err = tgsendMessage(message, Config.ACourseInMiraclesWorkbookTgChatId, "MarkdownV2")
+
+			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
+			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tg.Esc)
+
+			_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+				ChatId: Config.ACourseInMiraclesWorkbookTgChatId,
+				Text:   message,
+
+				LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
+			})
 			if err != nil {
-				return fmt.Errorf("tgsendMessage: %v", err)
+				return fmt.Errorf("tg.SendMessage: %v", err)
 			}
 		}
 
@@ -319,9 +328,14 @@ func PostABookOfDays() error {
 		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
 	}
 
-	_, err = tgsendMessage(abodtoday, Config.ABookOfDaysTgChatId, "MarkdownV2")
+	_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+		ChatId: Config.ABookOfDaysTgChatId,
+		Text:   abodtoday,
+
+		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
+	})
 	if err != nil {
-		return fmt.Errorf("tgsendMessage: %w", err)
+		return fmt.Errorf("tg.SendMessage: %w", err)
 	}
 
 	Config.ABookOfDaysLast = monthday
@@ -348,9 +362,14 @@ func PostMoonPhaseToday() error {
 	}
 
 	if moonphase != "" {
-		_, err = tgsendMessage(moonphase, Config.MoonPhaseTgChatId, "MarkdownV2")
+		_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+			ChatId: Config.MoonPhaseTgChatId,
+			Text:   moonphase,
+
+			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
+		})
 		if err != nil {
-			return fmt.Errorf("tgsendMessage: %v", err)
+			return fmt.Errorf("tg.SendMessage: %v", err)
 		}
 	}
 
@@ -361,19 +380,6 @@ func PostMoonPhaseToday() error {
 	}
 
 	return nil
-}
-
-func ts() string {
-	t := time.Now().Local()
-	return fmt.Sprintf(
-		"%03d."+"%02d%02d."+"%02d%02d",
-		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
-	)
-}
-
-func log(msg interface{}, args ...interface{}) {
-	msgtext := fmt.Sprintf("%s %s", ts(), msg) + NL
-	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
 func MoonPhaseCalendar() string {
@@ -425,106 +431,31 @@ func MoonPhaseToday() string {
 	return ""
 }
 
-type TgResponse struct {
-	Ok          bool       `json:"ok"`
-	Description string     `json:"description"`
-	Result      *TgMessage `json:"result"`
-}
-
-type TgResponseShort struct {
-	Ok          bool   `json:"ok"`
-	Description string `json:"description"`
-}
-
-type TgMessage struct {
-	MessageId int64 `json:"message_id"`
-	Text      string
-}
-
-type TgSendMessageRequest struct {
-	ChatId                string `json:"chat_id"`
-	Text                  string `json:"text"`
-	ParseMode             string `json:"parse_mode,omitempty"`
-	DisableWebPagePreview bool   `json:"disable_web_page_preview"`
-	DisableNotification   bool   `json:"disable_notification"`
-}
-
-func tgsendMessage(text string, chatid string, parsemode string) (msg *TgMessage, err error) {
-	// https://core.telegram.org/bots/api/#sendmessage
-	// https://core.telegram.org/bots/api/#formatting-options
-	if parsemode == "MarkdownV2" {
-		for _, c := range []string{`[`, `]`, `(`, `)`, `~`, "`", `>`, `#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`} {
-			text = strings.ReplaceAll(text, c, `\`+c)
-		}
-		text = strings.ReplaceAll(text, "______", `\_\_\_\_\_\_`)
-		text = strings.ReplaceAll(text, "_____", `\_\_\_\_\_`)
-		text = strings.ReplaceAll(text, "____", `\_\_\_\_`)
-		text = strings.ReplaceAll(text, "___", `\_\_\_`)
-		text = strings.ReplaceAll(text, "__", `\_\_`)
-	}
-	sendMessage := TgSendMessageRequest{
-		ChatId:                chatid,
-		Text:                  text,
-		ParseMode:             parsemode,
-		DisableWebPagePreview: true,
-	}
-	sendMessageJSON, err := json.Marshal(sendMessage)
-	if err != nil {
-		return nil, err
-	}
-
-	var tgresp TgResponse
-	err = postJson(
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", Config.TgToken),
-		bytes.NewBuffer(sendMessageJSON),
-		&tgresp,
+func ts() string {
+	tnow := time.Now().Local()
+	return fmt.Sprintf(
+		"%d%02d%02d:%02d%02d±",
+		tnow.Year()%1000, tnow.Month(), tnow.Day(),
+		tnow.Hour(), tnow.Minute(),
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	if !tgresp.Ok {
-		return nil, fmt.Errorf("sendMessage: %s", tgresp.Description)
-	}
-
-	msg = tgresp.Result
-
-	return msg, nil
 }
 
-func getJson(url string, target interface{}) error {
-	r, err := HttpClient.Get(url)
-	if err != nil {
-		return err
-	}
-	defer r.Body.Close()
-
-	return json.NewDecoder(r.Body).Decode(target)
+func log(msg string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, ts()+" "+msg+NL, args...)
 }
 
-func postJson(url string, data *bytes.Buffer, target interface{}) error {
-	resp, err := HttpClient.Post(
-		url,
-		"application/json",
-		data,
-	)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+func tglog(msg string, args ...interface{}) (err error) {
+	log(msg, args...)
+	text := fmt.Sprintf(msg, args...) + NL
+	text = tg.Esc(text)
+	_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+		ChatId: Config.TgChatId,
+		Text:   text,
 
-	respBody := bytes.NewBuffer(nil)
-	_, err = io.Copy(respBody, resp.Body)
-	if err != nil {
-		return fmt.Errorf("io.Copy: %v", err)
-	}
-
-	err = json.NewDecoder(respBody).Decode(target)
-	if err != nil {
-		return fmt.Errorf("Decode: %v", err)
-	}
-
-	return nil
+		DisableNotification: true,
+		LinkPreviewOptions:  tg.LinkPreviewOptions{IsDisabled: true},
+	})
+	return err
 }
 
 func (config *TgPosterConfig) Get() error {
