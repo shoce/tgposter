@@ -105,6 +105,8 @@ func init() {
 		os.Exit(1)
 	}
 
+	tg.ApiToken = Config.TgToken
+
 	if Config.TgChatId == "" {
 		log("ERROR TgChatId empty")
 		os.Exit(1)
@@ -257,7 +259,7 @@ func PostACourseInMiraclesWorkbook() error {
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tg.Esc)
 
-			_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+			_, err = tg.SendMessage(tg.SendMessageRequest{
 				ChatId: Config.ACourseInMiraclesWorkbookTgChatId,
 				Text:   message,
 
@@ -328,7 +330,7 @@ func PostABookOfDays() error {
 		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
 	}
 
-	_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+	_, err = tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.ABookOfDaysTgChatId,
 		Text:   abodtoday,
 
@@ -362,7 +364,7 @@ func PostMoonPhaseToday() error {
 	}
 
 	if moonphase != "" {
-		_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+		_, err = tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.MoonPhaseTgChatId,
 			Text:   moonphase,
 
@@ -448,7 +450,7 @@ func tglog(msg string, args ...interface{}) (err error) {
 	log(msg, args...)
 	text := fmt.Sprintf(msg, args...) + NL
 	text = tg.Esc(text)
-	_, err = tg.SendMessage(Config.TgToken, tg.SendMessageRequest{
+	_, err = tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.TgChatId,
 		Text:   text,
 
