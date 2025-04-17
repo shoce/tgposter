@@ -192,7 +192,7 @@ func PostACourseInMiraclesWorkbook() error {
 	} else {
 		ty0 = time.Date(time.Now().UTC().Year(), time.Month(3), 1, 0, 0, 0, 0, time.UTC)
 	}
-	daynum := time.Since(ty0)/(24*time.Hour) + 1
+	daynum := int(time.Since(ty0)/(24*time.Hour) + 1)
 	daynums := fmt.Sprintf(" %d ", daynum)
 
 	if Config.DEBUG {
@@ -262,6 +262,7 @@ func PostACourseInMiraclesWorkbook() error {
 
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tg.Esc)
+			message = tg.EscBI(message)
 
 			if Config.DEBUG {
 				log("DEBUG message==%v", message)
@@ -333,6 +334,8 @@ func PostABookOfDays() error {
 		return nil
 	}
 
+	abodtoday = tg.EscBI(abodtoday)
+
 	if Config.DEBUG {
 		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
 	}
@@ -369,10 +372,12 @@ func PostMoonPhaseToday() error {
 		return nil
 	}
 
+	message := tg.Esc(moonphase)
+
 	if moonphase != "" {
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.MoonPhaseTgChatId,
-			Text:   moonphase,
+			Text:   message,
 
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 		}); err != nil {
