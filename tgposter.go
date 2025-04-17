@@ -157,17 +157,17 @@ func main() {
 
 		err = PostMoonPhaseToday()
 		if err != nil {
-			log("WARNING PostMoonPhaseToday: %v", err)
+			log("ERROR PostMoonPhaseToday: %v", err)
 		}
 
 		err = PostABookOfDays()
 		if err != nil {
-			log("WARNING PostABookOfDays: %v", err)
+			log("ERROR PostABookOfDays: %v", err)
 		}
 
 		err = PostACourseInMiraclesWorkbook()
 		if err != nil {
-			log("WARNING PostACourseInMiraclesWorkbook: %v", err)
+			log("ERROR PostACourseInMiraclesWorkbook: %v", err)
 		}
 
 		if dur := time.Now().Sub(t0); dur < Config.Interval {
@@ -195,6 +195,10 @@ func PostACourseInMiraclesWorkbook() error {
 	daynum := time.Since(ty0)/(24*time.Hour) + 1
 	daynums := fmt.Sprintf(" %d ", daynum)
 
+	if Config.DEBUG {
+		log("DEBUG daynum==%v", daynum)
+	}
+
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
 	if err != nil {
 		return fmt.Errorf("ReadFile ACourseInMiraclesWorkbookPath=`%s`: %v", Config.ACourseInMiraclesWorkbookPath, err)
@@ -203,13 +207,13 @@ func PostACourseInMiraclesWorkbook() error {
 	if acimwb == "" {
 		return fmt.Errorf("Empty file ACourseInMiraclesWorkbookPath=`%s`", Config.ACourseInMiraclesWorkbookPath)
 	}
-	acimwbss := strings.Split(acimwb, "\n\n\n\n")
+	acimwbss := strings.Split(acimwb, NL+NL+NL+NL)
 
 	/*
 		var longis []string
 		for _, t := range acimwbss {
 			if len(t) >= 4000 {
-				tt := strings.Split(t, "\n")[0]
+				tt := strings.Split(t, NL)[0]
 				longis = append(longis, tt)
 			}
 		}
@@ -226,7 +230,7 @@ func PostACourseInMiraclesWorkbook() error {
 	}
 
 	for _, s := range acimwbss {
-		st := strings.Split(s, "\n")[0]
+		st := strings.Split(s, NL)[0]
 		if st == Config.ACourseInMiraclesWorkbookLast {
 			skip = false
 			continue
@@ -240,9 +244,9 @@ func PostACourseInMiraclesWorkbook() error {
 			spp = append(spp, s)
 		} else {
 			var sp string
-			srs := strings.Split(s, "\n\n")
+			srs := strings.Split(s, NL+NL)
 			for i, s := range srs {
-				sp += s + "\n\n"
+				sp += s + NL + NL
 				if i == len(srs)-1 || len(sp)+len(srs[i+1]) > 4000 {
 					spp = append(spp, sp)
 					sp = ""
@@ -259,14 +263,17 @@ func PostACourseInMiraclesWorkbook() error {
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tg.Esc)
 
-			_, err = tg.SendMessage(tg.SendMessageRequest{
+			if Config.DEBUG {
+				log("DEBUG message==%v", message)
+			}
+
+			if _, err := tg.SendMessage(tg.SendMessageRequest{
 				ChatId: Config.ACourseInMiraclesWorkbookTgChatId,
 				Text:   message,
 
 				LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
-			})
-			if err != nil {
-				return fmt.Errorf("tg.SendMessage: %v", err)
+			}); err != nil {
+				return err
 			}
 		}
 
@@ -330,14 +337,13 @@ func PostABookOfDays() error {
 		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
 	}
 
-	_, err = tg.SendMessage(tg.SendMessageRequest{
+	if _, err := tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.ABookOfDaysTgChatId,
 		Text:   abodtoday,
 
 		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
-	})
-	if err != nil {
-		return fmt.Errorf("tg.SendMessage: %w", err)
+	}); err != nil {
+		return err
 	}
 
 	Config.ABookOfDaysLast = monthday
@@ -364,14 +370,13 @@ func PostMoonPhaseToday() error {
 	}
 
 	if moonphase != "" {
-		_, err = tg.SendMessage(tg.SendMessageRequest{
+		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.MoonPhaseTgChatId,
 			Text:   moonphase,
 
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
-		})
-		if err != nil {
-			return fmt.Errorf("tg.SendMessage: %v", err)
+		}); err != nil {
+			return err
 		}
 	}
 
