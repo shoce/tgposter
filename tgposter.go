@@ -262,7 +262,7 @@ func PostACourseInMiraclesWorkbook() error {
 
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tg.Esc)
-			message = tg.EscBI(message)
+			message = tg.EscExcept(message, "*_")
 
 			if Config.DEBUG {
 				log("DEBUG message==%v", message)
@@ -334,7 +334,7 @@ func PostABookOfDays() error {
 		return nil
 	}
 
-	abodtoday = tg.EscBI(abodtoday)
+	abodtoday = tg.EscExcept(abodtoday, "*_")
 
 	if Config.DEBUG {
 		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
