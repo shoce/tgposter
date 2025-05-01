@@ -261,7 +261,8 @@ func PostACourseInMiraclesWorkbook() error {
 			}
 
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
-			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tg.Esc)
+			tgesc := func(text string) string { return tg.Esc(text) }
+			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tgesc)
 			message = tg.EscExcept(message, "*_")
 
 			if Config.DEBUG {
@@ -372,12 +373,10 @@ func PostMoonPhaseToday() error {
 		return nil
 	}
 
-	message := tg.Esc(moonphase)
-
 	if moonphase != "" {
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.MoonPhaseTgChatId,
-			Text:   message,
+			Text:   tg.Esc(moonphase),
 
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 		}); err != nil {
@@ -458,11 +457,9 @@ func log(msg string, args ...interface{}) {
 
 func tglog(msg string, args ...interface{}) (err error) {
 	log(msg, args...)
-	text := fmt.Sprintf(msg, args...) + NL
-	text = tg.Esc(text)
 	_, err = tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.TgChatId,
-		Text:   text,
+		Text:   tg.Esc(msg, args...),
 
 		DisableNotification: true,
 		LinkPreviewOptions:  tg.LinkPreviewOptions{IsDisabled: true},
