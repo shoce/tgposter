@@ -261,9 +261,8 @@ func PostACourseInMiraclesWorkbook() error {
 			}
 
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
-			tgesc := func(text string) string { return tg.Esc(text) }
-			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, tgesc)
 			message = tg.EscExcept(message, "*_")
+			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
 
 			if Config.DEBUG {
 				log("DEBUG message==%v", message)
