@@ -413,7 +413,8 @@ func MoonPhaseCalendar() string {
 }
 
 func MoonPhaseToday() string {
-	// https://pkg.go.dev/time#Layout
+	// https://www.timeanddate.com/moon/phases/timezone/utc
+	// https://pkg.go.dev/time
 	localtz := time.FixedZone("IST", 330*60)
 	var NewMoon1 time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
 	var NewMoon2 time.Time = time.Date(2025, time.June, 25, 10, 31, 0, 0, time.UTC)
