@@ -357,33 +357,28 @@ func PostABookOfDays() error {
 }
 
 func PostMoonPhaseToday() error {
-	var err error
-
 	if time.Now().UTC().Hour() < Config.PostingStartHour {
 		return nil
 	}
-
-	moonphase := MoonPhaseToday()
 
 	yearmonthday := time.Now().UTC().Format("2006 January 2")
 	if yearmonthday == Config.MoonPhaseTodayLast {
 		return nil
 	}
 
-	if moonphase != "" {
-		if _, err := tg.SendMessage(tg.SendMessageRequest{
+	if moonphase := MoonPhaseToday(); moonphase != "" {
+		if _, tgerr := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.MoonPhaseTgChatId,
 			Text:   tg.Esc(moonphase),
 
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
-		}); err != nil {
-			return err
+		}); tgerr != nil {
+			return tgerr
 		}
 	}
 
 	Config.MoonPhaseTodayLast = yearmonthday
-	err = Config.Put()
-	if err != nil {
+	if err := Config.Put(); err != nil {
 		return fmt.Errorf("ERROR Config.Put: %v", err)
 	}
 
@@ -423,21 +418,37 @@ func MoonPhaseToday() string {
 	const MoonCycleDur time.Duration = 2551443 * time.Second
 	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
 	var tnow time.Time = time.Now().UTC()
+
 	var sinceNew time.Duration = tnow.Sub(NewMoon) % MoonCycleDur
+	if sinceNew < 24*time.Hour {
+		return fmt.Sprintf(
+			"New Moon was at %s.",
+			tnow.Add(-sinceNew).In(localtz).Format("15:04 Monday, January 2"),
+		)
+	}
 	if tillNew := MoonCycleDur - sinceNew; tillNew < 24*time.Hour {
 		return fmt.Sprintf(
-			"New Moon at %s; next Full Moon is on %s.",
+			"New Moon at %s; next Full Moon on %s.",
 			tnow.Add(tillNew).In(localtz).Format("15:04 Monday, January 2"),
 			tnow.Add(MoonCycleDur/2).In(localtz).Format("Monday, January 2"),
 		)
 	}
+
+	var sinceFull time.Duration = sinceNew + MoonCycleDur/2
+	if sinceFull < 24*time.Hour {
+		return fmt.Sprintf(
+			"Full Moon was at %s.",
+			tnow.Add(-sinceFull).In(localtz).Format("15:04 Monday, January 2"),
+		)
+	}
 	if tillFull := MoonCycleDur/2 - sinceNew; tillFull >= 0 && tillFull < 24*time.Hour {
 		return fmt.Sprintf(
-			"Full Moon at %s; next New Moon is on %s.",
+			"Full Moon at %s; next New Moon on %s.",
 			tnow.Add(tillFull).In(localtz).Format("15:04 Monday, January 2"),
 			tnow.Add(MoonCycleDur/2).In(localtz).Format("Monday, January 2"),
 		)
 	}
+
 	return ""
 }
 
