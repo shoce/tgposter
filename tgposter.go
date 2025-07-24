@@ -425,18 +425,16 @@ func MoonPhaseToday() string {
 	var sinceNew time.Duration = tnow.Sub(NewMoon) % MoonCycleDur
 	if tillNew := MoonCycleDur - sinceNew; tillNew < 24*time.Hour {
 		return fmt.Sprintf(
-			"Today is New Moon; next Full Moon is on %s."+NL+
-				"New Moon at %s.",
-			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+			"New Moon at %s; next Full Moon is on %s.",
 			tnow.Add(tillNew).Format("15:04 Monday, January 2"),
+			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
 		)
 	}
 	if tillFull := MoonCycleDur/2 - sinceNew; tillFull >= 0 && tillFull < 24*time.Hour {
 		return fmt.Sprintf(
-			"Today is Full Moon; next New Moon is on %s."+NL+
-				"Full Foon at %s.",
-			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+			"Full Moon at %s; next New Moon is on %s.",
 			tnow.Add(tillFull).Format("15:04 Monday, January 2"),
+			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
 		)
 	}
 	return ""
