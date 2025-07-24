@@ -3,9 +3,7 @@
 https://core.telegram.org/bots/api/
 https://core.telegram.org/bots/api/#formatting-options
 
-GoGet
-GoFmt
-GoBuildNull
+GoGet GoFmt GoBuildNull
 
 */
 
@@ -420,22 +418,25 @@ func MoonPhaseCalendar() string {
 }
 
 func MoonPhaseToday() string {
+	// https://pkg.go.dev/time#Layout
 	const MoonCycleDur time.Duration = 2551443 * time.Second
 	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
-	var sinceNew time.Duration = time.Since(NewMoon) % MoonCycleDur
 	var tnow time.Time = time.Now().UTC()
+	var sinceNew time.Duration = tnow.Sub(NewMoon) % MoonCycleDur
 	if tillNew := MoonCycleDur - sinceNew; tillNew < 24*time.Hour {
 		return fmt.Sprintf(
-			"Today %s is New Moon; next Full Moon is on %s.",
-			tnow.Format("Monday, January 2"),
+			"Today is New Moon; next Full Moon is on %s."+NL+
+				"New Moon at %s.",
 			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+			tnow.Add(tillNew).Format("15:04 Monday, January 2"),
 		)
 	}
 	if tillFull := MoonCycleDur/2 - sinceNew; tillFull >= 0 && tillFull < 24*time.Hour {
 		return fmt.Sprintf(
-			"Today %s is Full Moon; next New Moon is on %s.",
-			tnow.Format("Monday, January 2"),
+			"Today is Full Moon; next New Moon is on %s."+NL+
+				"Full Foon at %s.",
 			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+			tnow.Add(tillFull).Format("15:04 Monday, January 2"),
 		)
 	}
 	return ""
