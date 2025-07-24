@@ -416,10 +416,10 @@ func MoonPhaseToday() string {
 	// https://www.timeanddate.com/moon/phases/timezone/utc
 	// https://pkg.go.dev/time
 	localtz := time.FixedZone("IST", 330*60)
+	//const MoonCycleDur time.Duration = 2551443 * time.Second
 	//var NewMoon1 time.Time = time.Date(2000, time.January, 6, 18, 13, 0, 0, time.UTC)
 	var NewMoon1 time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
 	var NewMoon2 time.Time = time.Date(2025, time.June, 25, 10, 31, 0, 0, time.UTC)
-	//const MoonCycleDur time.Duration = 2551443 * time.Second
 	var MoonCycleDur time.Duration = NewMoon2.Sub(NewMoon1) / 56
 	var NewMoon time.Time = NewMoon2
 	var tnow time.Time = time.Now().UTC()
