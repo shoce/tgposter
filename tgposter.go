@@ -361,7 +361,7 @@ func PostMoonPhaseToday() error {
 		return nil
 	}
 
-	yearmonthday := time.Now().UTC().Format("2006 January 2")
+	yearmonthday := time.Now().UTC().Format("2006/Jan/2")
 	if yearmonthday == Config.MoonPhaseTodayLast {
 		return nil
 	}
