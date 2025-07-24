@@ -419,6 +419,7 @@ func MoonPhaseCalendar() string {
 
 func MoonPhaseToday() string {
 	// https://pkg.go.dev/time#Layout
+	localtz := time.FixedZone("IST", 330*60)
 	const MoonCycleDur time.Duration = 2551443 * time.Second
 	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
 	var tnow time.Time = time.Now().UTC()
@@ -426,15 +427,15 @@ func MoonPhaseToday() string {
 	if tillNew := MoonCycleDur - sinceNew; tillNew < 24*time.Hour {
 		return fmt.Sprintf(
 			"New Moon at %s; next Full Moon is on %s.",
-			tnow.Add(tillNew).Format("15:04 Monday, January 2"),
-			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+			tnow.Add(tillNew).In(localtz).Format("15:04 Monday, January 2"),
+			tnow.Add(MoonCycleDur/2).In(localtz).Format("Monday, January 2"),
 		)
 	}
 	if tillFull := MoonCycleDur/2 - sinceNew; tillFull >= 0 && tillFull < 24*time.Hour {
 		return fmt.Sprintf(
 			"Full Moon at %s; next New Moon is on %s.",
-			tnow.Add(tillFull).Format("15:04 Monday, January 2"),
-			tnow.Add(MoonCycleDur/2).Format("Monday, January 2"),
+			tnow.Add(tillFull).In(localtz).Format("15:04 Monday, January 2"),
+			tnow.Add(MoonCycleDur/2).In(localtz).Format("Monday, January 2"),
 		)
 	}
 	return ""
