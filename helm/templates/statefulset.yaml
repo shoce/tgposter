@@ -3,30 +3,31 @@ apiVersion: apps/v1
 kind: StatefulSet
 
 metadata:
-  name: tgposter
+  name: {{ $.Values.AppName }}
   namespace: {{ $.Release.Namespace }}
   labels:
-    app: tgposter
+    app: {{ $.Values.AppName }}
 
 spec:
 
   selector:
     matchLabels:
-      app: tgposter
+      app: {{ $.Values.AppName }}
 
   template:
     metadata:
-      name: tgposter
+      name: {{ $.Values.AppName }}
       labels:
-        app: tgposter
+        app: {{ $.Values.AppName }}
     spec:
 
       containers:
 
-        - name: tgposter
+        - name: {{ $.Values.AppName }}
           image: "{{ $.Values.ImageNameGithubTgPoster }}:{{ $.Values.ImageTagGithubTgPoster }}"
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
-                name: tgposter
+                name: {{ $.Values.AppName }}
+
 

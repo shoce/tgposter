@@ -1,5 +1,7 @@
 ---
 
+AppName: tgposter
+
 ImageNameGithubTgPoster: ghcr.io/shoce/tgposter
 ImageTagGithubTgPoster: ""
 

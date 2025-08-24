@@ -1,8 +1,5 @@
 /*
 
-https://core.telegram.org/bots/api/
-https://core.telegram.org/bots/api/#formatting-options
-
 GoGet GoFmt GoBuildNull
 
 */
@@ -39,13 +36,12 @@ type TgPosterConfig struct {
 
 	Interval time.Duration `yaml:"Interval"`
 
+	TgApiUrlBase string `yaml:"TgApiUrlBase"` // = "https://api.telegram.org"
+
 	TgToken  string `yaml:"TgToken"`
 	TgChatId string `yaml:"TgChatId"`
 
 	PostingStartHour int `yaml:"PostingStartHour"`
-
-	MoonPhaseTgChatId  string `yaml:"MoonPhaseTgChatId"`
-	MoonPhaseTodayLast string `yaml:"MoonPhaseTodayLast"`
 
 	ABookOfDaysPath     string `yaml:"ABookOfDaysPath"`
 	ABookOfDaysLast     string `yaml:"ABookOfDaysLast"`
@@ -62,11 +58,14 @@ type TgPosterConfig struct {
 var (
 	Config TgPosterConfig
 
+	TZIST = time.FixedZone("IST", 330*60)
+
 	Ctx context.Context
 
 	HttpClient = &http.Client{}
 
-	ABookOfDaysRe               *regexp.Regexp
+	ABookOfDaysRe *regexp.Regexp
+
 	ACourseInMiraclesWorkbookRe *regexp.Regexp
 )
 
@@ -84,15 +83,15 @@ func init() {
 	}
 
 	if err := Config.Get(); err != nil {
-		log("ERROR Config.Get: %v", err)
+		log("ERROR Config.Get %v", err)
 		os.Exit(1)
 	}
 
 	if Config.DEBUG {
-		log("DEBUG==true")
+		log("DEBUG <true>")
 	}
 
-	log("Interval: %v", Config.Interval)
+	log("Interval <%v>", Config.Interval)
 	if Config.Interval == 0 {
 		log("ERROR Interval empty")
 		os.Exit(1)
@@ -111,12 +110,8 @@ func init() {
 	}
 
 	if Config.PostingStartHour < 0 || Config.PostingStartHour > 23 {
-		log("ERROR invalid PostingStartHour %d: must be between 0 and 23", Config.PostingStartHour)
+		log("ERROR invalid PostingStartHour <%d> must be between <0> and <23>", Config.PostingStartHour)
 		os.Exit(1)
-	}
-
-	if Config.MoonPhaseTgChatId == "" {
-		Config.MoonPhaseTgChatId = Config.TgChatId
 	}
 
 	if Config.ABookOfDaysReTemplate == "" && Config.ABookOfDaysPath != "" {
@@ -140,32 +135,23 @@ func init() {
 }
 
 func main() {
-	var err error
-
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, syscall.SIGTERM)
 	go func(sigterm chan os.Signal) {
 		<-sigterm
-		tglog("%s: sigterm", os.Args[0])
+		tglog("%s sigterm", os.Args[0])
 		os.Exit(1)
 	}(sigterm)
 
 	for {
 		t0 := time.Now()
 
-		err = PostMoonPhaseToday()
-		if err != nil {
-			log("ERROR PostMoonPhaseToday: %v", err)
+		if err := PostABookOfDays(); err != nil {
+			tglog("ERROR PostABookOfDays %v", err)
 		}
 
-		err = PostABookOfDays()
-		if err != nil {
-			log("ERROR PostABookOfDays: %v", err)
-		}
-
-		err = PostACourseInMiraclesWorkbook()
-		if err != nil {
-			log("ERROR PostACourseInMiraclesWorkbook: %v", err)
+		if err := PostACourseInMiraclesWorkbook(); err != nil {
+			tglog("ERROR PostACourseInMiraclesWorkbook %v", err)
 		}
 
 		if dur := time.Now().Sub(t0); dur < Config.Interval {
@@ -194,16 +180,16 @@ func PostACourseInMiraclesWorkbook() error {
 	daynums := fmt.Sprintf(" %d ", daynum)
 
 	if Config.DEBUG {
-		log("DEBUG daynum==%v", daynum)
+		log("DEBUG daynum <%v>", daynum)
 	}
 
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
 	if err != nil {
-		return fmt.Errorf("ReadFile ACourseInMiraclesWorkbookPath=`%s`: %v", Config.ACourseInMiraclesWorkbookPath, err)
+		return fmt.Errorf("ReadFile ACourseInMiraclesWorkbookPath %s %v", Config.ACourseInMiraclesWorkbookPath, err)
 	}
 	acimwb := string(acimwbbb)
 	if acimwb == "" {
-		return fmt.Errorf("Empty file ACourseInMiraclesWorkbookPath=`%s`", Config.ACourseInMiraclesWorkbookPath)
+		return fmt.Errorf("Empty file ACourseInMiraclesWorkbookPath %s", Config.ACourseInMiraclesWorkbookPath)
 	}
 	acimwbss := strings.Split(acimwb, NL+NL+NL+NL)
 
@@ -280,7 +266,7 @@ func PostACourseInMiraclesWorkbook() error {
 
 		err = Config.Put()
 		if err != nil {
-			return fmt.Errorf("ERROR Config.Put: %v", err)
+			return fmt.Errorf("ERROR Config.Put %v", err)
 		}
 
 		if ACourseInMiraclesWorkbookRe.MatchString(st) {
@@ -302,16 +288,16 @@ func PostABookOfDays() error {
 
 	abodbb, err := ioutil.ReadFile(Config.ABookOfDaysPath)
 	if err != nil {
-		return fmt.Errorf("ReadFile ABookOfDaysPath `%s`: %v", Config.ABookOfDaysPath, err)
+		return fmt.Errorf("ReadFile ABookOfDaysPath %s %v", Config.ABookOfDaysPath, err)
 	}
 	abod := strings.TrimSpace(string(abodbb))
 	if abod == "" {
-		return fmt.Errorf("Empty file ABookOfDaysPath `%s`", Config.ABookOfDaysPath)
+		return fmt.Errorf("Empty file ABookOfDaysPath %s", Config.ABookOfDaysPath)
 	}
 
 	monthday := time.Now().UTC().Format("January 2")
 	if Config.DEBUG {
-		log("DEBUG monthday:`%s`", monthday)
+		log("DEBUG monthday %s", monthday)
 	}
 
 	if monthday == Config.ABookOfDaysLast {
@@ -320,7 +306,7 @@ func PostABookOfDays() error {
 
 	abookofdaysre := strings.ReplaceAll(Config.ABookOfDaysReTemplate, "monthday", monthday)
 	if Config.DEBUG {
-		log("DEBUG abookofdaysre:`%s`", abookofdaysre)
+		log("DEBUG abookofdaysre %s", abookofdaysre)
 	}
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
 		return err
@@ -335,7 +321,7 @@ func PostABookOfDays() error {
 	abodtoday = tg.EscExcept(abodtoday, "*_")
 
 	if Config.DEBUG {
-		log("DEBUG abodtoday:"+NL+"%s", abodtoday)
+		log("DEBUG abodtoday ["+NL+"%s"+NL+"]", abodtoday)
 	}
 
 	if _, err := tg.SendMessage(tg.SendMessageRequest{
@@ -348,117 +334,15 @@ func PostABookOfDays() error {
 	}
 
 	Config.ABookOfDaysLast = monthday
-	err = Config.Put()
-	if err != nil {
-		return fmt.Errorf("ERROR Config.Put: %w", err)
-	}
-
-	return nil
-}
-
-func PostMoonPhaseToday() error {
-	if time.Now().UTC().Hour() < Config.PostingStartHour {
-		return nil
-	}
-
-	yearmonthday := time.Now().UTC().Format("2006/Jan/2")
-	if yearmonthday == Config.MoonPhaseTodayLast {
-		return nil
-	}
-
-	if moonphase := MoonPhaseToday(); moonphase != "" {
-		if _, tgerr := tg.SendMessage(tg.SendMessageRequest{
-			ChatId: Config.MoonPhaseTgChatId,
-			Text:   tg.Esc(moonphase),
-
-			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
-		}); tgerr != nil {
-			return tgerr
-		}
-	}
-
-	Config.MoonPhaseTodayLast = yearmonthday
 	if err := Config.Put(); err != nil {
-		return fmt.Errorf("ERROR Config.Put: %v", err)
+		return fmt.Errorf("ERROR Config.Put %w", err)
 	}
 
 	return nil
-}
-
-func MoonPhaseCalendar() string {
-	nmfm := []string{"○", "●"}
-	const MoonCycleDur time.Duration = 2551443 * time.Second
-	var NewMoon time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
-	var sinceNM time.Duration = time.Since(NewMoon) % MoonCycleDur
-	var lastNM time.Time = time.Now().UTC().Add(-sinceNM)
-	var msg, year, month string
-	var mo time.Time = lastNM
-	for i := 0; mo.Before(lastNM.Add(time.Hour * 24 * 7 * 54)); i++ {
-		if mo.Format("2006") != year {
-			year = mo.Format("2006")
-			msg += NL + NL + fmt.Sprintf("Year %s", year) + NL
-		}
-		if mo.Format("Jan") != month {
-			month = mo.Format("Jan")
-			msg += NL + fmt.Sprintf("%s ", month)
-		}
-		msg += fmt.Sprintf(
-			"%s:%s ",
-			mo.Add(-4*time.Hour).Format("Mon/2"),
-			nmfm[i%2],
-		)
-		mo = mo.Add(MoonCycleDur / 2)
-	}
-	return msg
-}
-
-func MoonPhaseToday() string {
-	// https://www.timeanddate.com/moon/phases/timezone/utc
-	// https://pkg.go.dev/time
-	localtz := time.FixedZone("IST", 330*60)
-	//const MoonCycleDur time.Duration = 2551443 * time.Second
-	//var NewMoon1 time.Time = time.Date(2000, time.January, 6, 18, 13, 0, 0, time.UTC)
-	var NewMoon1 time.Time = time.Date(2020, time.December, 14, 16, 16, 0, 0, time.UTC)
-	var NewMoon2 time.Time = time.Date(2025, time.June, 25, 10, 31, 0, 0, time.UTC)
-	var MoonCycleDur time.Duration = NewMoon2.Sub(NewMoon1) / 56
-	var NewMoon time.Time = NewMoon2
-	var tnow time.Time = time.Now().UTC()
-
-	var sinceNew time.Duration = tnow.Sub(NewMoon) % MoonCycleDur
-	if sinceNew < 24*time.Hour {
-		return fmt.Sprintf(
-			"New Moon was at %s.",
-			tnow.Add(-sinceNew).In(localtz).Format("15:04 Monday, January 2"),
-		)
-	}
-	if tillNew := MoonCycleDur - sinceNew; tillNew < 24*time.Hour {
-		return fmt.Sprintf(
-			"New Moon at %s; next Full Moon on %s.",
-			tnow.Add(tillNew).In(localtz).Format("15:04 Monday, January 2"),
-			tnow.Add(MoonCycleDur/2).In(localtz).Format("Monday, January 2"),
-		)
-	}
-
-	var sinceFull time.Duration = sinceNew + MoonCycleDur/2
-	if sinceFull < 24*time.Hour {
-		return fmt.Sprintf(
-			"Full Moon was at %s.",
-			tnow.Add(-sinceFull).In(localtz).Format("15:04 Monday, January 2"),
-		)
-	}
-	if tillFull := MoonCycleDur/2 - sinceNew; tillFull >= 0 && tillFull < 24*time.Hour {
-		return fmt.Sprintf(
-			"Full Moon at %s; next New Moon on %s.",
-			tnow.Add(tillFull).In(localtz).Format("15:04 Monday, January 2"),
-			tnow.Add(MoonCycleDur/2).In(localtz).Format("Monday, January 2"),
-		)
-	}
-
-	return ""
 }
 
 func ts() string {
-	tnow := time.Now().In(time.FixedZone("IST", 330*60))
+	tnow := time.Now().In(TZIST)
 	return fmt.Sprintf(
 		"%d%02d%02d:%02d%02d+",
 		tnow.Year()%1000, tnow.Month(), tnow.Day(),
@@ -506,7 +390,7 @@ func (config *TgPosterConfig) Get() error {
 	}
 
 	if config.DEBUG {
-		log("DEBUG Config.Get: %+v", config)
+		log("DEBUG Config.Get %+v", config)
 	}
 
 	return nil

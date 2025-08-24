@@ -1,26 +1,32 @@
 
+ARG APPNAME=tgposter
+
 # https://hub.docker.com/_/golang/tags
-FROM golang:1.24.3 AS build
+FROM golang:1.25.0 AS build
+ARG APPNAME
+ENV APPNAME=$APPNAME
 ENV CGO_ENABLED=0
 WORKDIR /root/
-RUN mkdir -p /root/tgposter/
-COPY *.go go.mod go.sum /root/tgposter/
-WORKDIR /root/tgposter/
+RUN mkdir -p /root/$APPNAME/
+COPY *.go go.mod go.sum /root/$APPNAME/
+WORKDIR /root/$APPNAME/
 RUN go version
 RUN go get -v
 RUN ls -l -a
-RUN go build -o tgposter .
+RUN go build -o $APPNAME .
 RUN ls -l -a
 
 
 # https://hub.docker.com/_/alpine/tags
-FROM alpine:3.21.3
+FROM alpine:3.22.1
+ARG APPNAME
+ENV APPNAME=$APPNAME
 RUN apk add --no-cache tzdata
 RUN apk add --no-cache gcompat && ln -s -f -v ld-linux-x86-64.so.2 /lib/libresolv.so.2
-RUN mkdir -p /opt/tgposter/
-COPY *.text /opt/tgposter/
-RUN ls -l -a /opt/tgposter/
-COPY --from=build /root/tgposter/tgposter /bin/tgposter
-WORKDIR /opt/tgposter/
-ENTRYPOINT ["/bin/tgposter"]
+RUN mkdir -p /opt/$APPNAME/
+COPY *.text /opt/$APPNAME/
+RUN ls -l -a /opt/$APPNAME/
+COPY --from=build /root/$APPNAME/$APPNAME /bin/$APPNAME
+WORKDIR /opt/$APPNAME/
+ENTRYPOINT /bin/$APPNAME
 
