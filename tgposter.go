@@ -297,7 +297,7 @@ func PostABookOfDays() error {
 
 	monthday := time.Now().UTC().Format("January 2")
 	if Config.DEBUG {
-		log("DEBUG monthday %s", monthday)
+		log("DEBUG monthday [%s]", monthday)
 	}
 
 	if monthday == Config.ABookOfDaysLast {
