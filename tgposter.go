@@ -1,8 +1,4 @@
-/*
-
-GoGet GoFmt GoBuildNull
-
-*/
+// GoGet GoFmt GoBuildNull
 
 package main
 
@@ -358,7 +354,7 @@ func tglog(msg string, args ...interface{}) (err error) {
 	log(msg, args...)
 	_, err = tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.TgChatId,
-		Text:   tg.Esc(msg, args...),
+		Text:   tg.Esc(tg.F(msg, args...)),
 
 		DisableNotification: true,
 		LinkPreviewOptions:  tg.LinkPreviewOptions{IsDisabled: true},
