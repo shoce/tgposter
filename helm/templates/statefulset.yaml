@@ -1,33 +1,36 @@
----
-apiVersion: apps/v1
-kind: StatefulSet
+
+apiVersion: "apps/v1"
+kind: "StatefulSet"
 
 metadata:
-  name: {{ $.Values.AppName }}
-  namespace: {{ $.Release.Namespace }}
+  name: "{{$.Values.AppName}}"
+  namespace: "{{$.Release.Namespace}}"
   labels:
-    app: {{ $.Values.AppName }}
+    app: "{{$.Values.AppName}}"
 
 spec:
 
   selector:
     matchLabels:
-      app: {{ $.Values.AppName }}
+      app: "{{$.Values.AppName}}"
 
   template:
     metadata:
-      name: {{ $.Values.AppName }}
+      name: "{{$.Values.AppName}}"
       labels:
-        app: {{ $.Values.AppName }}
+        app: "{{$.Values.AppName}}"
+      annotations:
+        image: "{{$.Values.ImageNameGithubTgPoster}}:{{$.Values.ImageTagGithubTgPoster}}"
     spec:
 
       containers:
 
-        - name: {{ $.Values.AppName }}
-          image: "{{ $.Values.ImageNameGithubTgPoster }}:{{ $.Values.ImageTagGithubTgPoster }}"
-          imagePullPolicy: IfNotPresent
-          envFrom:
-            - configMapRef:
-                name: {{ $.Values.AppName }}
+        - name: "{{$.Values.AppName}}"
+          image: "{{$.Values.ImageNameGithubTgPoster}}:{{$.Values.ImageTagGithubTgPoster}}"
+          imagePullPolicy: "IfNotPresent"
+          env:
+            - name: "YssUrl"
+              value: "{{$.Values.YssUrl}}"
+
 
 
