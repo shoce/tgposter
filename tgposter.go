@@ -516,7 +516,7 @@ func (config *TgPosterConfig) Get() error {
 	if err != nil {
 		return err
 	}
-
+	
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -524,35 +524,36 @@ func (config *TgPosterConfig) Get() error {
 	if resp.StatusCode != 200 {
 		return EF("yss response status %s", resp.Status)
 	}
-
+	
 	rbb, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
-
+	
 	if err := yaml.Unmarshal(rbb, config); err != nil {
 		return err
 	}
-
+	
+	perr(F("DEBUG Config.Get [-"+NL+"%s"+NL+"-]", rbb))
 	perr(F("DEBUG Config.Get %+v", config))
-
+	
 	return nil
 }
 
 func (config *TgPosterConfig) Put() error {
 	perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
-
+	
 	// https://pkg.go.dev/github.com/goccy/go-yaml#MarshalWithOptions
 	rbb, err := yaml.MarshalWithOptions(config, yaml.JSON(), yaml.Flow(false))
 	if err != nil {
 		return err
 	}
-
+	
 	req, err := http.NewRequest(http.MethodPut, config.YssUrl, bytes.NewBuffer(rbb))
 	if err != nil {
 		return err
 	}
-
+	
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -560,7 +561,7 @@ func (config *TgPosterConfig) Put() error {
 	if resp.StatusCode != 200 {
 		return EF("yss response status %s", resp.Status)
 	}
-
+	
 	return nil
 }
 
