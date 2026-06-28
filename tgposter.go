@@ -22,7 +22,7 @@ import (
 	"syscall"
 	"time"
 
-	yaml "gopkg.in/yaml.v3"
+	yaml "github.com/goccy/go-yaml"
 
 	"github.com/shoce/tg"
 )
@@ -548,7 +548,8 @@ func (config *TgPosterConfig) Put() error {
 		perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
 	}
 
-	rbb, err := yaml.Marshal(config)
+	// https://pkg.go.dev/github.com/goccy/go-yaml#MarshalWithOptions
+	rbb, err := yaml.MarshalWithOptions(config, yaml.JSON(), yaml.Flow(false))
 	if err != nil {
 		return err
 	}
