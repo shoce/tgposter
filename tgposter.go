@@ -42,7 +42,7 @@ type TgPosterConfig struct {
 	TgApiUrlBase string `yaml:"TgApiUrlBase"` // "https://api.telegram.org"
 	
 	TgToken string `yaml:"TgToken"`
-	TgUpdateLog []int64 `yaml:"TgUpdateLog"`
+	TgUpdateLog []int64 `yaml:"TgUpdateLog,flow"`
 	TgUpdateLogMaxSize int `yaml:"TgUpdateLogMaxSize"` // 333
 	
 	TgChatId string `yaml:"TgChatId"`
