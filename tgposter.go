@@ -119,6 +119,10 @@ func init() {
 	
 	tg.ApiToken = Config.TgToken
 	
+	if Config.TgUpdateLogMaxSize <= 0 {
+		Config.TgUpdateLogMaxSize = 333
+	}
+	
 	if Config.TgChatId == "" {
 		perr("ERROR TgChatId empty")
 		os.Exit(1)
