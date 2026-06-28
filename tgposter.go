@@ -1,4 +1,9 @@
-// GoGet GoFmt GoBuildNull
+// log(
+/*
+GoGet
+GoFmt
+GoBuildNull
+*/
 
 package main
 
@@ -22,6 +27,7 @@ import (
 )
 
 const (
+	SP = " "
 	NL = "\n"
 )
 
@@ -63,6 +69,10 @@ var (
 	ABookOfDaysRe *regexp.Regexp
 
 	ACourseInMiraclesWorkbookRe *regexp.Regexp
+	
+	F = fmt.Sprintf
+	EF = fmt.Errorf
+	pout = fmt.Print
 )
 
 func init() {
@@ -74,58 +84,58 @@ func init() {
 		Config.YssUrl = s
 	}
 	if Config.YssUrl == "" {
-		log("ERROR YssUrl empty")
+		perr("ERROR YssUrl empty")
 		os.Exit(1)
 	}
 
 	if err := Config.Get(); err != nil {
-		log("ERROR Config.Get %v", err)
+		perr(F("ERROR Config.Get %v", err))
 		os.Exit(1)
 	}
 
 	if Config.DEBUG {
-		log("DEBUG <true>")
+		perr("DEBUG <true>")
 	}
 
-	log("Interval <%v>", Config.Interval)
+	perr(F("Interval <%v>", Config.Interval))
 	if Config.Interval == 0 {
-		log("ERROR Interval empty")
+		perr("ERROR Interval empty")
 		os.Exit(1)
 	}
 
 	if Config.TgToken == "" {
-		log("ERROR TgToken empty")
+		perr("ERROR TgToken empty")
 		os.Exit(1)
 	}
 
 	tg.ApiToken = Config.TgToken
 
 	if Config.TgChatId == "" {
-		log("ERROR TgChatId empty")
+		perr("ERROR TgChatId empty")
 		os.Exit(1)
 	}
 
 	if Config.PostingStartHour < 0 || Config.PostingStartHour > 23 {
-		log("ERROR invalid PostingStartHour <%d> must be between <0> and <23>", Config.PostingStartHour)
+		perr(F("ERROR invalid PostingStartHour <%d> must be between <0> and <23>", Config.PostingStartHour))
 		os.Exit(1)
 	}
 
 	if Config.ABookOfDaysReTemplate == "" && Config.ABookOfDaysPath != "" {
-		log("ERROR ABookOfDaysReTemplate is empty")
+		perr("ERROR ABookOfDaysReTemplate is empty")
 		os.Exit(1)
 	}
 
 	if Config.ABookOfDaysTgChatId == "" && Config.ABookOfDaysPath != "" {
-		log("ERROR ABookOfDaysTgChatId is empty")
+		perr("ERROR ABookOfDaysTgChatId is empty")
 		os.Exit(1)
 	}
 
 	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(Config.ACourseInMiraclesWorkbookReString); err != nil {
-		log("ERROR invalid ACourseInMiraclesWorkbookReString `%s`: %v", Config.ACourseInMiraclesWorkbookReString, err)
+		perr(F("ERROR invalid ACourseInMiraclesWorkbookReString `%s`: %v", Config.ACourseInMiraclesWorkbookReString, err))
 		os.Exit(1)
 	}
 	if Config.ACourseInMiraclesWorkbookTgChatId == "" && Config.ACourseInMiraclesWorkbookPath != "" {
-		log("ACourseInMiraclesWorkbookTgChatId is empty")
+		perr("ACourseInMiraclesWorkbookTgChatId is empty")
 		os.Exit(1)
 	}
 }
@@ -135,7 +145,7 @@ func main() {
 	signal.Notify(sigterm, syscall.SIGTERM)
 	go func(sigterm chan os.Signal) {
 		<-sigterm
-		tglog("%s sigterm", os.Args[0])
+		tglog(F("%s sigterm", os.Args[0]))
 		os.Exit(1)
 	}(sigterm)
 
@@ -143,11 +153,11 @@ func main() {
 		t0 := time.Now()
 
 		if err := PostABookOfDays(); err != nil {
-			tglog("ERROR PostABookOfDays %v", err)
+			tglog(F("ERROR PostABookOfDays %v", err))
 		}
 
 		if err := PostACourseInMiraclesWorkbook(); err != nil {
-			tglog("ERROR PostACourseInMiraclesWorkbook %v", err)
+			tglog(F("ERROR PostACourseInMiraclesWorkbook %v", err))
 		}
 
 		if dur := time.Now().Sub(t0); dur < Config.Interval {
@@ -176,7 +186,7 @@ func PostACourseInMiraclesWorkbook() error {
 	daynums := fmt.Sprintf(" %d ", daynum)
 
 	if Config.DEBUG {
-		log("DEBUG daynum <%v>", daynum)
+		perr(F("DEBUG daynum <%v>", daynum))
 	}
 
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
@@ -197,7 +207,7 @@ func PostACourseInMiraclesWorkbook() error {
 				longis = append(longis, tt)
 			}
 		}
-		log("ACourseInMiraclesWorkbook texts of 4000+ length: %s", strings.Join(longis, ", "))
+		perr(F("ACourseInMiraclesWorkbook texts len<4000>+ [%s]", strings.Join(longis, "], [")))
 	*/
 
 	if strings.Contains(Config.ACourseInMiraclesWorkbookLast, daynums) {
@@ -245,7 +255,7 @@ func PostACourseInMiraclesWorkbook() error {
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
 
 			if Config.DEBUG {
-				log("DEBUG message==%v", message)
+				perr(F("DEBUG message==%v", message))
 			}
 
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
@@ -262,7 +272,7 @@ func PostACourseInMiraclesWorkbook() error {
 
 		err = Config.Put()
 		if err != nil {
-			return fmt.Errorf("ERROR Config.Put %v", err)
+			return EF("ERROR Config.Put %v", err)
 		}
 
 		if ACourseInMiraclesWorkbookRe.MatchString(st) {
@@ -279,21 +289,21 @@ func PostABookOfDays() error {
 	}
 
 	if Config.ABookOfDaysReTemplate == "" {
-		return fmt.Errorf("ABookOfDaysReTemplate is empty")
+		return EF("ABookOfDaysReTemplate is empty")
 	}
 
 	abodbb, err := ioutil.ReadFile(Config.ABookOfDaysPath)
 	if err != nil {
-		return fmt.Errorf("ReadFile ABookOfDaysPath %s %v", Config.ABookOfDaysPath, err)
+		return EF("ReadFile ABookOfDaysPath %s %v", Config.ABookOfDaysPath, err)
 	}
 	abod := strings.TrimSpace(string(abodbb))
 	if abod == "" {
-		return fmt.Errorf("Empty file ABookOfDaysPath %s", Config.ABookOfDaysPath)
+		return EF("Empty file ABookOfDaysPath %s", Config.ABookOfDaysPath)
 	}
 
 	monthday := time.Now().UTC().Format("January 2")
 	if Config.DEBUG {
-		log("DEBUG monthday [%s]", monthday)
+		perr(F("DEBUG monthday [%s]", monthday))
 	}
 
 	if monthday == Config.ABookOfDaysLast {
@@ -302,7 +312,7 @@ func PostABookOfDays() error {
 
 	abookofdaysre := strings.ReplaceAll(Config.ABookOfDaysReTemplate, "monthday", monthday)
 	if Config.DEBUG {
-		log("DEBUG abookofdaysre %s", abookofdaysre)
+		perr(F("DEBUG abookofdaysre %s", abookofdaysre))
 	}
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
 		return err
@@ -310,14 +320,14 @@ func PostABookOfDays() error {
 	abodtoday := ABookOfDaysRe.FindString(abod)
 	abodtoday = strings.TrimSpace(abodtoday)
 	if abodtoday == "" {
-		log("Could not find A Book of Days text for today")
+		perr("Could not find A Book of Days text for today")
 		return nil
 	}
 
 	abodtoday = tg.EscExcept(abodtoday, "*_")
 
 	if Config.DEBUG {
-		log("DEBUG abodtoday ["+NL+"%s"+NL+"]", abodtoday)
+		perr(F("DEBUG abodtoday [-"+NL+"%s"+NL+"-]", abodtoday))
 	}
 
 	if _, err := tg.SendMessage(tg.SendMessageRequest{
@@ -338,23 +348,23 @@ func PostABookOfDays() error {
 }
 
 func ts() string {
-	tnow := time.Now().In(TZIST)
+	tnow := time.Now()
 	return fmt.Sprintf(
-		"%d%02d%02d:%02d%02d+",
+		"%d%02d%02d:%02d%02d-",
 		tnow.Year()%1000, tnow.Month(), tnow.Day(),
 		tnow.Hour(), tnow.Minute(),
 	)
 }
 
-func log(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, ts()+" "+msg+NL, args...)
+func perr(msg string) {
+	fmt.Fprint(os.Stderr, ts()+SP+msg+NL)
 }
 
-func tglog(msg string, args ...interface{}) (err error) {
-	log(msg, args...)
+func tglog(msg string) (err error) {
+	perr(msg)
 	_, err = tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.TgChatId,
-		Text:   tg.Esc(tg.F(msg, args...)),
+		Text:   tg.Esc(msg),
 
 		DisableNotification: true,
 		LinkPreviewOptions:  tg.LinkPreviewOptions{IsDisabled: true},
@@ -386,7 +396,7 @@ func (config *TgPosterConfig) Get() error {
 	}
 
 	if config.DEBUG {
-		log("DEBUG Config.Get %+v", config)
+		perr(F("DEBUG Config.Get %+v", config))
 	}
 
 	return nil
@@ -394,7 +404,7 @@ func (config *TgPosterConfig) Get() error {
 
 func (config *TgPosterConfig) Put() error {
 	if config.DEBUG {
-		log("DEBUG Config.Put %s %+v", config.YssUrl, config)
+		perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
 	}
 
 	rbb, err := yaml.Marshal(config)
@@ -412,8 +422,9 @@ func (config *TgPosterConfig) Put() error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("yss response status %s", resp.Status)
+		return EF("yss response status %s", resp.Status)
 	}
 
 	return nil
 }
+
