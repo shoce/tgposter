@@ -324,7 +324,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 			message = tg.EscExcept(message, "*_")
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
 			
-			perr(F("DEBUG PostACourseInMiraclesWorkbook message [%s]", message))
+			perr(F("DEBUG PostACourseInMiraclesWorkbook message [-"+NL+"%s"+NL+"-]", message))
 			
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
 				ChatId: chatid,
