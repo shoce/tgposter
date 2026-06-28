@@ -1,4 +1,4 @@
-// log( :328 :214 :199 :347 :166 :171
+// log( :328 :214 :199 :347 :166 :171 :484
 /*
 GoGet
 GoFmt
@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -33,44 +34,48 @@ const (
 
 type TgPosterConfig struct {
 	YssUrl string `yaml:"-"`
-
+	
 	DEBUG bool
-
+	
 	Interval time.Duration
-
+	
 	TgApiUrlBase string // "https://api.telegram.org"
-
+	
 	TgToken  string
+	TgUpdateLog []int64
+	TgUpdateLogMaxSize int // 333
+	
 	TgChatId string
-
 	PostingStartHour int
-
+	
 	ABookOfDaysPath     string
 	ABookOfDaysTgChatId string
 	ABookOfDaysLast     string
 	ABookOfDaysReTemplate string
-
+	
 	ACourseInMiraclesWorkbookPath     string
 	ACourseInMiraclesWorkbookTgChatId string
 	ACourseInMiraclesWorkbookLast     string
 	ACourseInMiraclesWorkbookReString string
 	
-	Chats []struct{
-		TgChatId   string
-		DaysOffset uint // days from mar/1
-		ABookOfDaysEnabled bool
-		ABookOfDaysLast    string
-		ACourseInMiraclesWorkbookEnabled bool
-		ACourseInMiraclesWorkbookLast    string
-	}
+	Chats []TgPosterConfigChat
+}
+
+type TgPosterConfigChat struct {
+	TgChatId string
+	DaysOffset uint // days from mar/1
+	ABookOfDaysEnabled bool
+	ABookOfDaysLast string
+	ACourseInMiraclesWorkbookEnabled bool
+	ACourseInMiraclesWorkbookLast string
 }
 
 var (
 	Config TgPosterConfig
-
+	
 	Ctx context.Context
 	HttpClient = &http.Client{}
-
+	
 	ABookOfDaysRe *regexp.Regexp
 	ACourseInMiraclesWorkbookRe *regexp.Regexp
 	
@@ -81,9 +86,9 @@ var (
 
 func init() {
 	var err error
-
+	
 	Ctx = context.TODO()
-
+	
 	if s := os.Getenv("YssUrl"); s != "" {
 		Config.YssUrl = s
 	}
@@ -91,49 +96,49 @@ func init() {
 		perr("ERROR YssUrl empty")
 		os.Exit(1)
 	}
-
+	
 	if err := Config.Get(); err != nil {
 		perr(F("ERROR Config.Get %v", err))
 		os.Exit(1)
 	}
-
+	
 	if Config.DEBUG {
 		perr("DEBUG <true>")
 	}
-
+	
 	perr(F("Interval <%v>", Config.Interval))
 	if Config.Interval == 0 {
 		perr("ERROR Interval empty")
 		os.Exit(1)
 	}
-
+	
 	if Config.TgToken == "" {
 		perr("ERROR TgToken empty")
 		os.Exit(1)
 	}
-
+	
 	tg.ApiToken = Config.TgToken
-
+	
 	if Config.TgChatId == "" {
 		perr("ERROR TgChatId empty")
 		os.Exit(1)
 	}
-
+	
 	if Config.PostingStartHour < 0 || Config.PostingStartHour > 23 {
 		perr(F("ERROR invalid PostingStartHour <%d> must be between <0> and <23>", Config.PostingStartHour))
 		os.Exit(1)
 	}
-
+	
 	if Config.ABookOfDaysReTemplate == "" && Config.ABookOfDaysPath != "" {
 		perr("ERROR ABookOfDaysReTemplate is empty")
 		os.Exit(1)
 	}
-
+	
 	if Config.ABookOfDaysTgChatId == "" && Config.ABookOfDaysPath != "" {
 		perr("ERROR ABookOfDaysTgChatId is empty")
 		os.Exit(1)
 	}
-
+	
 	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(Config.ACourseInMiraclesWorkbookReString); err != nil {
 		perr(F("ERROR invalid ACourseInMiraclesWorkbookReString `%s`: %v", Config.ACourseInMiraclesWorkbookReString, err))
 		os.Exit(1)
@@ -157,8 +162,15 @@ func main() {
 	var daysoffset uint
 	var last string
 
+	var t0 time.Time
+
 	for {
-		t0 := time.Now()
+
+		t0 = time.Now()
+
+		if err := TgGetUpdates(); err != nil {
+			perr(F("ERROR TgGetUpdates %v", err))
+		}
 
 		chatid = Config.ABookOfDaysTgChatId
 		daysoffset = 0
@@ -209,12 +221,16 @@ func main() {
 				}
 			}
 		}
-
-		if dur := time.Now().Sub(t0); dur < Config.Interval {
-			time.Sleep(Config.Interval - dur)
+		
+		for time.Now().Sub(t0) < Config.Interval {
+			time.Sleep(111*time.Second)
+			if err := TgGetUpdates(); err != nil {
+				perr(F("ERROR TgGetUpdates %v", err))
+			}
 		}
+		
 	}
-
+	
 }
 
 func mar1daysoffset(t time.Time) uint {
@@ -388,6 +404,88 @@ func PostABookOfDays(chatid string, daysoffset uint, last string) (last2 string,
 	}
 
 	return last2, nil
+}
+
+func TgGetUpdates() (err error) {
+	
+	var updatesoffset int64
+	
+	if len(Config.TgUpdateLog) > 0 {
+		updatesoffset = Config.TgUpdateLog[len(Config.TgUpdateLog)-1] + 1
+	}
+	
+	var uu []tg.Update
+	var tgupdatesjson string
+	uu, tgupdatesjson, err = tg.GetUpdates(updatesoffset)
+	if err != nil {
+		return EF("tg.GetUpdates %v", err)
+	}
+	
+	for _, u := range uu {
+		perr("Update" + SP + strings.ReplaceAll(F("%+v", u), NL, "<NL>"))
+		/*
+			if len(TgUpdateLog) > 0 && u.UpdateId < TgUpdateLog[len(TgUpdateLog)-1] {
+				log("WARNING this telegram update id <%d> is older than last id <%d>, skipping", u.UpdateId, TgUpdateLog[len(TgUpdateLog)-1])
+				continue
+			}
+		*/
+		if slices.Contains(Config.TgUpdateLog, u.UpdateId) {
+			perr(F("WARNING this telegram update id <%d> was already processed, skipping", u.UpdateId))
+			continue
+		}
+		Config.TgUpdateLog = append(Config.TgUpdateLog, u.UpdateId)
+		if len(Config.TgUpdateLog) > Config.TgUpdateLogMaxSize {
+			Config.TgUpdateLog = Config.TgUpdateLog[len(Config.TgUpdateLog)-Config.TgUpdateLogMaxSize:]
+		}
+		if err := Config.Put(); err != nil {
+			return EF("Config.Put %v", err)
+		}
+		
+		if m, err := processTgUpdate(u, tgupdatesjson); err != nil {
+			perr(F("ERROR processTgUpdate %v", err))
+			if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
+				ChatId:    fmt.Sprintf("%d", m.Chat.Id),
+				MessageId: m.MessageId,
+				Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "🤷‍♂"}},
+			}); tgerr != nil {
+				perr(F("ERROR tg.SetMessageReaction [🤷‍♂] %v", tgerr))
+			}
+			return err
+		}
+		if err := Config.Put(); err != nil {
+			return EF("Config.Put %v", err)
+		}
+	}
+	
+	return nil
+	
+}
+
+func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error) {
+	
+	cmu := u.MyChatMember
+	if cmu.Date!=0 && cmu.NewChatMember.Status=="member" {
+		cmuid := F("%d", cmu.NewChatMember.User.Id)
+		updated := false
+		for ic, _ := range Config.Chats {
+			if Config.Chats[ic].TgChatId == cmuid {
+				Config.Chats[ic].DaysOffset = mar1daysoffset(time.Now().UTC())
+				//Config.Chats[ic].ABookOfDaysEnabled = true
+				Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = true
+				updated = true
+			}
+		}
+		if !updated {
+			Config.Chats = append(Config.Chats, TgPosterConfigChat{
+				TgChatId: cmuid,
+				DaysOffset: mar1daysoffset(time.Now().UTC()),
+				//ABookOfDaysEnabled: true,
+				ACourseInMiraclesWorkbookEnabled: true,
+			})
+		}
+	}
+	
+	return
 }
 
 func ts() string {
