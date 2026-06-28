@@ -257,7 +257,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 	daynum := mar1daysoffset(tnow) + 1 - daysoffset 
 	daynums := F(" %d ", daynum)
 
-	perr(F("DEBUG PostACourseInMiraclesWorkbook daysoffset <%d> daynum <%v>", daysoffset, daynum))
+	perr(F("DEBUG PostACourseInMiraclesWorkbook daysoffset <%d> daynum <%d>", daysoffset, daynum))
 
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
 	if err != nil {
@@ -324,7 +324,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 			message = tg.EscExcept(message, "*_")
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
 			
-			perr(F("DEBUG message [%s]", message))
+			perr(F("DEBUG PostACourseInMiraclesWorkbook message [%s]", message))
 			
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
 				ChatId: chatid,
