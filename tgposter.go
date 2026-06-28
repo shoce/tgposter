@@ -324,9 +324,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 			message = tg.EscExcept(message, "*_")
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
 
-			if Config.DEBUG {
-				perr(F("DEBUG message [%s]", message))
-			}
+			perr(F("DEBUG message [%s]", message))
 
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
 				ChatId: chatid,
@@ -536,17 +534,13 @@ func (config *TgPosterConfig) Get() error {
 		return err
 	}
 
-	if config.DEBUG {
-		perr(F("DEBUG Config.Get %+v", config))
-	}
+	perr(F("DEBUG Config.Get %+v", config))
 
 	return nil
 }
 
 func (config *TgPosterConfig) Put() error {
-	if config.DEBUG {
-		perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
-	}
+	perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
 
 	// https://pkg.go.dev/github.com/goccy/go-yaml#MarshalWithOptions
 	rbb, err := yaml.MarshalWithOptions(config, yaml.JSON(), yaml.Flow(false))
