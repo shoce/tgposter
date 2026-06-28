@@ -35,39 +35,39 @@ const (
 type TgPosterConfig struct {
 	YssUrl string `yaml:"-"`
 	
-	DEBUG bool
+	DEBUG bool `yaml:"DEBUG"`
 	
-	Interval time.Duration
+	Interval time.Duration `yaml:"Interval"`
 	
-	TgApiUrlBase string // "https://api.telegram.org"
+	TgApiUrlBase string `yaml:"TgApiUrlBase"` // "https://api.telegram.org"
 	
-	TgToken  string
-	TgUpdateLog []int64
-	TgUpdateLogMaxSize int // 333
+	TgToken string `yaml:"TgToken"`
+	TgUpdateLog []int64 `yaml:"TgUpdateLog"`
+	TgUpdateLogMaxSize int `yaml:"TgUpdateLogMaxSize"` // 333
 	
-	TgChatId string
-	PostingStartHour int
+	TgChatId string `yaml:"TgChatId"`
+	PostingStartHour int `yaml:"PostingStartHour"`
 	
-	ABookOfDaysPath     string
-	ABookOfDaysTgChatId string
-	ABookOfDaysLast     string
-	ABookOfDaysReTemplate string
+	ABookOfDaysPath     string `yaml:"ABookOfDaysPath"`
+	ABookOfDaysTgChatId string `yaml:"ABookOfDaysTgChatId"`
+	ABookOfDaysLast     string `yaml:"ABookOfDaysLast"`
+	ABookOfDaysReTemplate string `yaml:"ABookOfDaysReTemplate"`
 	
-	ACourseInMiraclesWorkbookPath     string
-	ACourseInMiraclesWorkbookTgChatId string
-	ACourseInMiraclesWorkbookLast     string
-	ACourseInMiraclesWorkbookReString string
+	ACourseInMiraclesWorkbookPath     string `yaml:"ACourseInMiraclesWorkbookPath"`
+	ACourseInMiraclesWorkbookTgChatId string `yaml:"ACourseInMiraclesWorkbookTgChatId"`
+	ACourseInMiraclesWorkbookLast     string `yaml:"ACourseInMiraclesWorkbookLast"`
+	ACourseInMiraclesWorkbookReString string `yaml:"ACourseInMiraclesWorkbookReString"`
 	
-	Chats []TgPosterConfigChat
+	Chats []TgPosterConfigChat `yaml:"Chats"`
 }
 
 type TgPosterConfigChat struct {
-	TgChatId string
-	DaysOffset uint // days from mar/1
-	ABookOfDaysEnabled bool
-	ABookOfDaysLast string
-	ACourseInMiraclesWorkbookEnabled bool
-	ACourseInMiraclesWorkbookLast string
+	TgChatId string `yaml:"TgChatId"`
+	DaysOffset uint `yaml:"DaysOffset"` // days from mar/1
+	ABookOfDaysEnabled bool `yaml:"ABookOfDaysEnabled"`
+	ABookOfDaysLast string `yaml:"ABookOfDaysLast"`
+	ACourseInMiraclesWorkbookEnabled bool `yaml:"ACourseInMiraclesWorkbookEnabled"`
+	ACourseInMiraclesWorkbookLast string `yaml:"ACourseInMiraclesWorkbookLast"`
 }
 
 var (
