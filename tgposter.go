@@ -223,7 +223,7 @@ func main() {
 		}
 		
 		for time.Now().Sub(t0) < Config.Interval {
-			time.Sleep(111*time.Second)
+			time.Sleep(77*time.Second)
 			if err := TgGetUpdates(); err != nil {
 				perr(F("ERROR TgGetUpdates %v", err))
 			}
@@ -237,7 +237,7 @@ func mar1daysoffset(t time.Time) uint {
 	// https://pkg.go.dev/time#Time
 	y0 := t.Year()
 	if t.Month()<3 { y0-- }
-	t0 := time.Date(y0, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
+	t0 := time.Date(y0, 3, 1, 0, 0, 0, 0, t.Location())
 	// https://pkg.go.dev/time#Duration
 	return uint(t.Sub(t0).Hours()/24)
 }
@@ -261,11 +261,11 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
 	if err != nil {
-		return "", EF("ReadFile ACourseInMiraclesWorkbookPath %s %v", Config.ACourseInMiraclesWorkbookPath, err)
+		return "", EF("ReadFile ACourseInMiraclesWorkbookPath [%s] %v", Config.ACourseInMiraclesWorkbookPath, err)
 	}
 	acimwb := string(acimwbbb)
 	if acimwb == "" {
-		return "", EF("Empty file ACourseInMiraclesWorkbookPath %s", Config.ACourseInMiraclesWorkbookPath)
+		return "", EF("Empty file ACourseInMiraclesWorkbookPath [%s]", Config.ACourseInMiraclesWorkbookPath)
 	}
 	acimwbss := strings.Split(acimwb, NL+NL+NL+NL)
 
@@ -420,7 +420,7 @@ func TgGetUpdates() (err error) {
 	}
 	
 	for _, u := range uu {
-		perr("Update" + SP + strings.ReplaceAll(F("%+v", u), NL, "<NL>"))
+		//perr("DEBUG Update" + SP + strings.ReplaceAll(F("%+v", u), NL, "<NL>"))
 		/*
 			if len(TgUpdateLog) > 0 && u.UpdateId < TgUpdateLog[len(TgUpdateLog)-1] {
 				log("WARNING this telegram update id <%d> is older than last id <%d>, skipping", u.UpdateId, TgUpdateLog[len(TgUpdateLog)-1])
@@ -461,6 +461,9 @@ func TgGetUpdates() (err error) {
 
 func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error) {
 	m = u.Message
+	if m.MessageId!=0 {
+		perr(F("DEBUG Message %v", m))
+	}
 	if m.MessageId!=0 && m.Text=="/sub" {
 		chatid := F("%d", m.From.Id)
 		updated := false
@@ -501,10 +504,9 @@ func tglog(msg string) (err error) {
 	perr(msg)
 	_, err = tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.TgChatId,
-		Text:   tg.Esc(msg),
-
+		Text: tg.Esc(msg),
 		DisableNotification: true,
-		LinkPreviewOptions:  tg.LinkPreviewOptions{IsDisabled: true},
+		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 	})
 	return err
 }
@@ -532,14 +534,14 @@ func (config *TgPosterConfig) Get() error {
 		return err
 	}
 	
-	perr(F("DEBUG Config.Get [-"+NL+"%s"+NL+"-]", rbb))
-	perr(F("DEBUG Config.Get %+v", config))
+	//perr(F("DEBUG Config.Get [-"+NL+"%s"+NL+"-]", rbb))
+	//perr(F("DEBUG Config.Get %+v", config))
 	
 	return nil
 }
 
 func (config *TgPosterConfig) Put() error {
-	perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
+	//perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
 	
 	// https://pkg.go.dev/github.com/goccy/go-yaml#MarshalWithOptions
 	rbb, err := yaml.MarshalWithOptions(config, yaml.JSON(), yaml.Flow(false))
