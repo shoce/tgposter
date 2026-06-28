@@ -313,36 +313,36 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 				}
 			}
 		}
-
+		
 		for i, sp := range spp {
 			message := sp
 			if i > 0 {
 				message = st + " (continued)\n\n" + sp
 			}
-
+			
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
 			message = tg.EscExcept(message, "*_")
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
-
+			
 			perr(F("DEBUG message [%s]", message))
-
+			
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
 				ChatId: chatid,
 				Text:   message,
-
+				
 				LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 			}); err != nil {
 				return "", err
 			}
 		}
-
+		
 		last2 = st
-
+		
 		if ACourseInMiraclesWorkbookRe.MatchString(st) {
 			break
 		}
 	}
-
+	
 	return last2, nil
 }
 
@@ -351,11 +351,11 @@ func PostABookOfDays(chatid string, daysoffset uint, last string) (last2 string,
 	if Config.ABookOfDaysPath == "" { return }
 	tnow := time.Now().UTC()
 	if tnow.Hour() < Config.PostingStartHour { return }
-
+	
 	if Config.ABookOfDaysReTemplate == "" {
 		return "", EF("ABookOfDaysReTemplate is empty")
 	}
-
+	
 	abodbb, err := ioutil.ReadFile(Config.ABookOfDaysPath)
 	if err != nil {
 		return "", EF("ReadFile ABookOfDaysPath [%s] %v", Config.ABookOfDaysPath, err)
@@ -364,13 +364,13 @@ func PostABookOfDays(chatid string, daysoffset uint, last string) (last2 string,
 	if abod == "" {
 		return "", EF("Empty file ABookOfDaysPath [%s]", Config.ABookOfDaysPath)
 	}
-
+	
 	tnow = tnow.Add(time.Duration(daysoffset*24)*time.Hour)
 	monthday := tnow.Format("January 2")
 	perr(F("DEBUG monthday [%s]", monthday))
-
+	
 	if monthday == last { return "", nil }
-
+	
 	abookofdaysre := strings.ReplaceAll(Config.ABookOfDaysReTemplate, "monthday", monthday)
 	perr(F("DEBUG abookofdaysre [%s]", abookofdaysre))
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
@@ -382,25 +382,25 @@ func PostABookOfDays(chatid string, daysoffset uint, last string) (last2 string,
 		perr("Could not find A Book of Days text for today")
 		return "", nil
 	}
-
+	
 	abodtoday = tg.EscExcept(abodtoday, "*_")
-
+	
 	perr(F("DEBUG abodtoday [-"+NL+"%s"+NL+"-]", abodtoday))
-
+	
 	if _, err := tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.ABookOfDaysTgChatId,
 		Text:   abodtoday,
-
+		
 		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 	}); err != nil {
 		return "", err
 	}
-
+	
 	last2 = monthday
 	if err := Config.Put(); err != nil {
 		return "", EF("ERROR Config.Put %w", err)
 	}
-
+	
 	return last2, nil
 }
 
@@ -460,13 +460,12 @@ func TgGetUpdates() (err error) {
 }
 
 func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error) {
-	
-	cmu := u.MyChatMember
-	if cmu.Date!=0 && cmu.NewChatMember.Status=="member" {
-		cmuid := F("%d", cmu.NewChatMember.User.Id)
+	m = u.Message
+	if m.MessageId!=0 && m.Text=="/sub" {
+		chatid := F("%d", m.From.Id)
 		updated := false
 		for ic, _ := range Config.Chats {
-			if Config.Chats[ic].TgChatId == cmuid {
+			if Config.Chats[ic].TgChatId == chatid {
 				Config.Chats[ic].DaysOffset = mar1daysoffset(time.Now().UTC())
 				//Config.Chats[ic].ABookOfDaysEnabled = true
 				Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = true
@@ -475,14 +474,13 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		}
 		if !updated {
 			Config.Chats = append(Config.Chats, TgPosterConfigChat{
-				TgChatId: cmuid,
+				TgChatId: chatid,
 				DaysOffset: mar1daysoffset(time.Now().UTC()),
 				//ABookOfDaysEnabled: true,
 				ACourseInMiraclesWorkbookEnabled: true,
 			})
 		}
 	}
-	
 	return
 }
 
