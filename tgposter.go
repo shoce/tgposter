@@ -257,7 +257,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 	daynum := mar1daysoffset(tnow) + 1 - daysoffset 
 	daynums := F(" %d ", daynum)
 
-	perr(F("DEBUG daynum <%v>", daynum))
+	perr(F("DEBUG PostACourseInMiraclesWorkbook daysoffset <%d> daynum <%v>", daysoffset, daynum))
 
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
 	if err != nil {
@@ -367,7 +367,7 @@ func PostABookOfDays(chatid string, daysoffset uint, last string) (last2 string,
 	
 	tnow = tnow.Add(time.Duration(daysoffset*24)*time.Hour)
 	monthday := tnow.Format("January 2")
-	perr(F("DEBUG monthday [%s]", monthday))
+	perr(F("DEBUG PostABookOfDays daysoffset <%d> monthday [%s]", daysoffset, monthday))
 	
 	if monthday == last { return "", nil }
 	
