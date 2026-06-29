@@ -429,8 +429,8 @@ func TgGetUpdates() (err error) {
 	for _, u := range uu {
 		//perr("DEBUG Update" + SP + strings.ReplaceAll(F("%+v", u), NL, "<NL>"))
 		/*
-			if len(TgUpdateLog) > 0 && u.UpdateId < TgUpdateLog[len(TgUpdateLog)-1] {
-				log("WARNING this telegram update id <%d> is older than last id <%d>, skipping", u.UpdateId, TgUpdateLog[len(TgUpdateLog)-1])
+			if len(TgUpdateLog)>0 && u.UpdateId<TgUpdateLog[len(TgUpdateLog)-1] {
+				perr(F("WARNING this telegram update id <%d> is older than last id <%d>, skipping", u.UpdateId, TgUpdateLog[len(TgUpdateLog)-1]))
 				continue
 			}
 		*/
@@ -447,7 +447,15 @@ func TgGetUpdates() (err error) {
 		}
 		
 		var m tg.Message
-		if m, err = processTgUpdate(u, tgupdatesjson); err != nil {
+		if m, err = processTgUpdate(u, tgupdatesjson); err == nil {
+			if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
+				ChatId:    FI(m.Chat.Id, 10),
+				MessageId: m.MessageId,
+				Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "👌"}},
+			}); tgerr != nil {
+				perr(F("ERROR tg.SetMessageReaction [👌] %v", tgerr))
+			}
+		} else {
 			perr(F("ERROR processTgUpdate %v", err))
 			if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
 				ChatId:    FI(m.Chat.Id, 10),
@@ -456,14 +464,6 @@ func TgGetUpdates() (err error) {
 			}); tgerr != nil {
 				perr(F("ERROR tg.SetMessageReaction [😭] %v", tgerr))
 			}
-			return err
-		}
-		if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
-			ChatId:    FI(m.Chat.Id, 10),
-			MessageId: m.MessageId,
-			Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "👌"}},
-		}); tgerr != nil {
-			perr(F("ERROR tg.SetMessageReaction [👌] %v", tgerr))
 		}
 		if err := Config.Put(); err != nil {
 			return EF("Config.Put %v", err)
