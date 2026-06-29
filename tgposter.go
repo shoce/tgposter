@@ -490,7 +490,9 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 			if Config.Chats[ic].TgChatId == chatid {
 				Config.Chats[ic].DaysOffset = mar1daysoffset(time.Now().UTC())
 				//Config.Chats[ic].ABookOfDaysEnabled = true
+				//Config.Chats[ic].ABookOfDaysLast = ""
 				Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = true
+				Config.Chats[ic].ACourseInMiraclesWorkbookLast = ""
 				updated = true
 			}
 		}
