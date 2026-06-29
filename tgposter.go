@@ -33,6 +33,21 @@ const (
 	NL = "\n"
 )
 
+var (
+	Config TgPosterConfig
+	
+	Ctx context.Context
+	HttpClient = &http.Client{}
+	
+	ABookOfDaysRe *regexp.Regexp
+	ACourseInMiraclesWorkbookRe *regexp.Regexp
+	
+	F = fmt.Sprintf
+	EF = fmt.Errorf
+	FI = strconv.FormatInt
+	pout = fmt.Print
+)
+
 type TgPosterConfig struct {
 	YssUrl string `yaml:"-"`
 	
@@ -70,20 +85,6 @@ type TgPosterConfigChat struct {
 	ACourseInMiraclesWorkbookEnabled bool `yaml:"ACourseInMiraclesWorkbookEnabled"`
 	ACourseInMiraclesWorkbookLast string `yaml:"ACourseInMiraclesWorkbookLast"`
 }
-
-var (
-	Config TgPosterConfig
-	
-	Ctx context.Context
-	HttpClient = &http.Client{}
-	
-	ABookOfDaysRe *regexp.Regexp
-	ACourseInMiraclesWorkbookRe *regexp.Regexp
-	
-	F = fmt.Sprintf
-	EF = fmt.Errorf
-	pout = fmt.Print
-)
 
 func init() {
 	var err error
@@ -448,7 +449,7 @@ func TgGetUpdates() (err error) {
 		if m, err = processTgUpdate(u, tgupdatesjson); err != nil {
 			perr(F("ERROR processTgUpdate %v", err))
 			if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
-				ChatId:    strconv.FormatInt(m.Chat.Id, 10),
+				ChatId:    FI(m.Chat.Id, 10),
 				MessageId: m.MessageId,
 				Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "😭"}},
 			}); tgerr != nil {
@@ -457,7 +458,7 @@ func TgGetUpdates() (err error) {
 			return err
 		}
 		if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
-			ChatId:    strconv.FormatInt(m.Chat.Id, 10),
+			ChatId:    FI(m.Chat.Id, 10),
 			MessageId: m.MessageId,
 			Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "👌"}},
 		}); tgerr != nil {
@@ -473,14 +474,15 @@ func TgGetUpdates() (err error) {
 }
 
 func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error) {
-
+	
 	m = u.Message
+	chatid := FI(m.From.Id, 10)
 	if m.MessageId!=0 {
 		perr(F("DEBUG Message %v", m))
 	}
 	switch m.Text {
+		
 	case "/start":
-		chatid := F("%d", m.From.Id)
 		updated := false
 		for ic, _ := range Config.Chats {
 			if Config.Chats[ic].TgChatId == chatid {
@@ -502,7 +504,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 			return m, EF("Config.Put %v", err)
 		}
 		
-		tgmsg := "hello. welcome. here you have found *a course in miracles workbook* in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages block the bot. unblock and start the bot to start the course from the beginning."+NL+"peace ✌️ and joy 🥳"
+		tgmsg := "hello. welcome. here you have found *a course in miracles workbook* in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages send `/stop`. send `/start` to restart the course from the beginning."+NL+"peace ✌️ and joy 🥳"
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.TgChatId,
 			Text: tg.Esc(tgmsg),
@@ -511,6 +513,27 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		}); err!=nil {
 			perr(F("ERROR tg.SendMessage %v", err))
 		}
+	
+	case "/stop":
+		for ic, _ := range Config.Chats {
+			if Config.Chats[ic].TgChatId == chatid {
+				Config.Chats[ic].ABookOfDaysEnabled = false
+				Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = false
+			}
+		}
+		if err := Config.Put(); err != nil {
+			return m, EF("Config.Put %v", err)
+		}
+		tgmsg := "stopped. to restart send `/start`."
+		if _, err := tg.SendMessage(tg.SendMessageRequest{
+			ChatId: Config.TgChatId,
+			Text: tg.Esc(tgmsg),
+			DisableNotification: true,
+			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
+		}); err!=nil {
+			perr(F("ERROR tg.SendMessage %v", err))
+		}
+	
 	}
 	
 	return
