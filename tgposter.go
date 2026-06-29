@@ -1,4 +1,4 @@
-// log( :328 :214 :199 :347 :166 :171 :484
+// log( :328 :214 :199 :347 :166 :171 :484 :459
 /*
 GoGet
 GoFmt
@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -443,16 +444,24 @@ func TgGetUpdates() (err error) {
 			return EF("Config.Put %v", err)
 		}
 		
-		if m, err := processTgUpdate(u, tgupdatesjson); err != nil {
+		var m tg.Message
+		if m, err = processTgUpdate(u, tgupdatesjson); err != nil {
 			perr(F("ERROR processTgUpdate %v", err))
 			if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
-				ChatId:    fmt.Sprintf("%d", m.Chat.Id),
+				ChatId:    strconv.FormatInt(m.Chat.Id, 10),
 				MessageId: m.MessageId,
-				Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "🤷‍♂"}},
+				Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "😭"}},
 			}); tgerr != nil {
-				perr(F("ERROR tg.SetMessageReaction [🤷‍♂] %v", tgerr))
+				perr(F("ERROR tg.SetMessageReaction [😭] %v", tgerr))
 			}
 			return err
+		}
+		if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
+			ChatId:    strconv.FormatInt(m.Chat.Id, 10),
+			MessageId: m.MessageId,
+			Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "👌"}},
+		}); tgerr != nil {
+			perr(F("ERROR tg.SetMessageReaction [👌] %v", tgerr))
 		}
 		if err := Config.Put(); err != nil {
 			return EF("Config.Put %v", err)
@@ -464,11 +473,13 @@ func TgGetUpdates() (err error) {
 }
 
 func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error) {
+
 	m = u.Message
 	if m.MessageId!=0 {
 		perr(F("DEBUG Message %v", m))
 	}
-	if m.MessageId!=0 && m.Text=="/sub" {
+	switch m.Text {
+	case "/start":
 		chatid := F("%d", m.From.Id)
 		updated := false
 		for ic, _ := range Config.Chats {
@@ -487,7 +498,21 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 				ACourseInMiraclesWorkbookEnabled: true,
 			})
 		}
+		if err := Config.Put(); err != nil {
+			return m, EF("Config.Put %v", err)
+		}
+		
+		tgmsg := "hello. welcome. here you have found *a course in miracles workbook* in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages block the bot. unblock and start the bot to start the course from the beginning."+NL+"peace ✌️ and joy 🥳"
+		if _, err := tg.SendMessage(tg.SendMessageRequest{
+			ChatId: Config.TgChatId,
+			Text: tg.Esc(tgmsg),
+			DisableNotification: true,
+			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
+		}); err!=nil {
+			perr(F("ERROR tg.SendMessage %v", err))
+		}
 	}
+	
 	return
 }
 
