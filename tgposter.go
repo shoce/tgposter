@@ -1,4 +1,4 @@
-// log( :328 :214 :199 :347 :166 :171 :484 :459
+// log( :328 :214 :199 :347 :166 :171 :484 :459 :511
 /*
 GoGet
 GoFmt
@@ -29,6 +29,7 @@ import (
 )
 
 const (
+	N = ""
 	SP = " "
 	NL = "\n"
 )
@@ -477,9 +478,10 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 	
 	m = u.Message
 	chatid := FI(m.From.Id, 10)
-	if m.MessageId!=0 {
-		perr(F("DEBUG Message %v", m))
+	if m.MessageId==0 {
+		return m, EF("unknown update")
 	}
+	perr(F("DEBUG Message %v", m))
 	switch m.Text {
 		
 	case "/start":
@@ -504,10 +506,14 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 			return m, EF("Config.Put %v", err)
 		}
 		
-		tgmsg := "hello. welcome. here you have found *a course in miracles workbook* in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages send `/stop`. send `/start` to restart the course from the beginning."+NL+"peace ✌️ and joy 🥳"
+		tgmsg := (
+			"hello, welcome. here you have found *a course in miracles workbook* in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages send `/stop`. send `/start` to restart the course from the beginning."+NL+
+			"peace and joy!"+NL+
+			"✌️"+NL+
+			N)
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.TgChatId,
-			Text: tg.Esc(tgmsg),
+			Text: tgmsg,
 			DisableNotification: true,
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 		}); err!=nil {
@@ -524,10 +530,10 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		if err := Config.Put(); err != nil {
 			return m, EF("Config.Put %v", err)
 		}
-		tgmsg := "stopped. to restart send `/start`."
+		tgmsg := "stopped. to restart send `/start`."+NL
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: Config.TgChatId,
-			Text: tg.Esc(tgmsg),
+			Text: tgmsg,
 			DisableNotification: true,
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 		}); err!=nil {
