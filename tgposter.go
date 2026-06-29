@@ -514,7 +514,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 			"✌️"+NL+
 			N)
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
-			ChatId: Config.TgChatId,
+			ChatId: FI(m.Chat.Id, 10),
 			Text: tgmsg,
 			DisableNotification: true,
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
@@ -534,7 +534,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		}
 		tgmsg := "stopped. to restart send `/start`."+NL
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
-			ChatId: Config.TgChatId,
+			ChatId: FI(m.Chat.Id, 10),
 			Text: tgmsg,
 			DisableNotification: true,
 			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
@@ -571,6 +571,7 @@ func tglog(msg string) (err error) {
 		DisableNotification: true,
 		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 	})
+	time.Sleep(time.Second)
 	return err
 }
 
