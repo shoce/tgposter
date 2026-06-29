@@ -534,6 +534,9 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 			perr(F("ERROR tg.SendMessage %v", err))
 		}
 	
+	default:
+		return m, EF("unknown command [%s]", m.Text)
+	
 	}
 	
 	return
