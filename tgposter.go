@@ -509,9 +509,9 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		}
 		
 		tgmsg := (
-			"hello, welcome. here you have found *a course in miracles workbook* in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages send `/stop`. send `/start` to restart the course from the beginning."+NL+
-			"peace and joy!"+NL+
-			"✌️"+NL+
+			tg.Esc("hello, welcome. here you have found ") + tg.Bold("a course in miracles workbook") + tg.Esc(" in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages send ") + tg.Code("/stop") + tg.Esc(". send ") + tg.Code("/start") + tg.Esc(" to restart the course from the beginning.") + NL +
+			tg.Esc("peace and joy!") + NL + 
+			tg.Esc("✌️") + NL + 
 			N)
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: FI(m.Chat.Id, 10),
@@ -532,7 +532,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		if err := Config.Put(); err != nil {
 			return m, EF("Config.Put %v", err)
 		}
-		tgmsg := "stopped. to restart send `/start`."+NL
+		tgmsg := tg.Esc("stopped. to restart send ") + tg.Code("/start") + tg.Esc(".") + NL
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: FI(m.Chat.Id, 10),
 			Text: tgmsg,
