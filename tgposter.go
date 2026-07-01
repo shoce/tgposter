@@ -182,7 +182,7 @@ func main() {
 		chatid = Config.ABookOfDaysTgChatId
 		daysoffset = 0
 		last = Config.ABookOfDaysLast
-		if last2, err := PostABookOfDays(chatid, daysoffset, last); err != nil {
+		if last2, err := PostABookOfDays(chatid, daysoffset, last, false); err != nil {
 			tglog(F("ERROR PostABookOfDays %v", err))
 		} else if last2!="" && last2!=last {
 			Config.ABookOfDaysLast = last2
@@ -193,7 +193,7 @@ func main() {
 
 		chatid = Config.ACourseInMiraclesWorkbookTgChatId
 		last = Config.ACourseInMiraclesWorkbookLast
-		if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last); err != nil {
+		if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, false); err != nil {
 			tglog(F("ERROR PostACourseInMiraclesWorkbook %v", err))
 		} else if last2!="" && last2!=last {
 			Config.ACourseInMiraclesWorkbookLast = last2
@@ -207,7 +207,7 @@ func main() {
 			daysoffset = Config.Chats[ic].DaysOffset
 			if Config.Chats[ic].ABookOfDaysEnabled {
 				last = Config.Chats[ic].ABookOfDaysLast
-				if last2, err := PostABookOfDays(chatid, daysoffset, last); err != nil {
+				if last2, err := PostABookOfDays(chatid, daysoffset, last, true); err != nil {
 					tglog(F("ERROR PostABookOfDays [%s] %v", chatid, err))
 				} else if last2!="" && last2!=last {
 					Config.Chats[ic].ABookOfDaysLast = last2
@@ -218,7 +218,7 @@ func main() {
 			}
 			if Config.Chats[ic].ACourseInMiraclesWorkbookEnabled {
 				last = Config.Chats[ic].ACourseInMiraclesWorkbookLast
-				if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last); err != nil {
+				if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, true); err != nil {
 					tglog(F("ERROR PostACourseInMiraclesWorkbook [%s] %v", chatid, err))
 				} else if last2!="" && last2!=last {
 					Config.Chats[ic].ACourseInMiraclesWorkbookLast = last2
@@ -249,7 +249,7 @@ func mar1daysoffset(t time.Time) uint {
 	return uint(t.Sub(t0).Hours()/24)
 }
 
-func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) (last2 string, err error) {
+func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, header bool) (last2 string, err error) {
 	if chatid=="" { return }
 	if Config.ACourseInMiraclesWorkbookPath == "" { return }
 	tnow := time.Now().UTC()
@@ -305,7 +305,11 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 		if skip {
 			continue
 		}
-
+		
+		if header {
+			s = "*A Course In Miracles Workbook*" + NL + NL + s
+		}
+		
 		var spp []string
 		if len(s) < 4000 {
 			spp = append(spp, s)
@@ -353,7 +357,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string) 
 	return last2, nil
 }
 
-func PostABookOfDays(chatid string, daysoffset uint, last string) (last2 string, err error) {
+func PostABookOfDays(chatid string, daysoffset uint, last string, header bool) (last2 string, err error) {
 	if chatid=="" { return }
 	if Config.ABookOfDaysPath == "" { return }
 	tnow := time.Now().UTC()
@@ -391,6 +395,10 @@ func PostABookOfDays(chatid string, daysoffset uint, last string) (last2 string,
 	}
 	
 	abodtoday = tg.EscExcept(abodtoday, "*_")
+	
+	if header {
+		abodtoday = "*A Book Of Days*" + NL + NL + abodtoday
+	}
 	
 	perr(F("DEBUG abodtoday [-"+NL+"%s"+NL+"-]", abodtoday))
 	
@@ -509,8 +517,8 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		}
 		
 		tgmsg := (
-			tg.Esc("hello, welcome. here you have found ") + tg.Bold("a course in miracles workbook") + tg.Esc(" in form of daily messages. when you start the bot, you start the course from day one. to stop receiving daily messages send ") + tg.Code("/stop") + tg.Esc(". send ") + tg.Code("/start") + tg.Esc(" to restart the course from the beginning.") + NL +
-			tg.Esc("peace and joy!") + NL + 
+			tg.Esc("Hello, welcome! Here you have found ") + tg.Bold("A Course in Miracles Workbook") + tg.Esc(" in form of daily messages. When you start the bot, you start the course from day one. To stop receiving daily messages send ") + tg.Code("/stop") + tg.Esc(". Send ") + tg.Code("/start") + tg.Esc(" to restart the course from the beginning.") + NL +
+			tg.Esc("Peace and Love!") + NL + 
 			tg.Esc("✌️") + NL + 
 			N)
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
@@ -532,7 +540,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		if err := Config.Put(); err != nil {
 			return m, EF("Config.Put %v", err)
 		}
-		tgmsg := tg.Esc("stopped. to restart send ") + tg.Code("/start") + tg.Esc(".") + NL
+		tgmsg := tg.Esc("Stopped. To restart send ") + tg.Code("/start") + tg.Esc(".") + NL
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: FI(m.Chat.Id, 10),
 			Text: tgmsg,
