@@ -1,4 +1,4 @@
-// log( :328 :214 :199 :347 :166 :171 :484 :459 :511
+// log( :328 :214 :199 :347 :166 :171 :484 :459 :511 :405 EF(
 /*
 GoGet
 GoFmt
@@ -80,6 +80,7 @@ type TgPosterConfig struct {
 
 type TgPosterConfigChat struct {
 	TgChatId string `yaml:"TgChatId"`
+	TgUsername string `yaml:"TgUsername"`
 	DaysOffset uint `yaml:"DaysOffset"` // days from mar/1
 	ABookOfDaysEnabled bool `yaml:"ABookOfDaysEnabled"`
 	ABookOfDaysLast string `yaml:"ABookOfDaysLast"`
@@ -268,11 +269,11 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, 
 
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
 	if err != nil {
-		return "", EF("ReadFile ACourseInMiraclesWorkbookPath [%s] %v", Config.ACourseInMiraclesWorkbookPath, err)
+		return "", EF("ReadFile ACourseInMiraclesWorkbookPath [%s] %w", Config.ACourseInMiraclesWorkbookPath, err)
 	}
 	acimwb := string(acimwbbb)
 	if acimwb == "" {
-		return "", EF("Empty file ACourseInMiraclesWorkbookPath [%s]", Config.ACourseInMiraclesWorkbookPath)
+		return "", EF("empty file ACourseInMiraclesWorkbookPath [%s]", Config.ACourseInMiraclesWorkbookPath)
 	}
 	acimwbss := strings.Split(acimwb, NL+NL+NL+NL)
 
@@ -284,7 +285,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, 
 				longis = append(longis, tt)
 			}
 		}
-		perr(F("ACourseInMiraclesWorkbook texts len<4000>+ [%s]", strings.Join(longis, "], [")))
+		perr(F("DEBUG PostACourseInMiraclesWorkbook texts len<4000>+ [%s]", strings.Join(longis, "], [")))
 	*/
 
 	if strings.Contains(last, daynums) {
@@ -335,6 +336,7 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, 
 			message = tg.EscExcept(message, "*_")
 			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
 			
+			perr(F("DEBUG PostACourseInMiraclesWorkbook  sending to chatid [%s]", chatid))
 			perr(F("DEBUG PostACourseInMiraclesWorkbook message [-"+NL+"%s"+NL+"-]", message))
 			
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
@@ -369,11 +371,11 @@ func PostABookOfDays(chatid string, daysoffset uint, last string, header bool) (
 	
 	abodbb, err := ioutil.ReadFile(Config.ABookOfDaysPath)
 	if err != nil {
-		return "", EF("ReadFile ABookOfDaysPath [%s] %v", Config.ABookOfDaysPath, err)
+		return "", EF("ReadFile ABookOfDaysPath [%s] %w", Config.ABookOfDaysPath, err)
 	}
 	abod := strings.TrimSpace(string(abodbb))
 	if abod == "" {
-		return "", EF("Empty file ABookOfDaysPath [%s]", Config.ABookOfDaysPath)
+		return "", EF("empty file ABookOfDaysPath [%s]", Config.ABookOfDaysPath)
 	}
 	
 	tnow = tnow.Add(time.Duration(daysoffset*24)*time.Hour)
@@ -383,14 +385,14 @@ func PostABookOfDays(chatid string, daysoffset uint, last string, header bool) (
 	if monthday == last { return "", nil }
 	
 	abookofdaysre := strings.ReplaceAll(Config.ABookOfDaysReTemplate, "monthday", monthday)
-	perr(F("DEBUG abookofdaysre [%s]", abookofdaysre))
+	perr(F("DEBUG PostABookOfDays abookofdaysre [%s]", abookofdaysre))
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
 		return "", err
 	}
 	abodtoday := ABookOfDaysRe.FindString(abod)
 	abodtoday = strings.TrimSpace(abodtoday)
 	if abodtoday == "" {
-		perr("Could not find A Book of Days text for today")
+		perr("ERROR PostABookOfDays could not find A Book Of Days text for today")
 		return "", nil
 	}
 	
@@ -400,12 +402,12 @@ func PostABookOfDays(chatid string, daysoffset uint, last string, header bool) (
 		abodtoday = "*A Book Of Days*" + NL + NL + abodtoday
 	}
 	
-	perr(F("DEBUG abodtoday [-"+NL+"%s"+NL+"-]", abodtoday))
+	perr(F("DEBUG PostABookOfDays sending to chatid [%s]", chatid))
+	perr(F("DEBUG PostABookOfDays message [-"+NL+"%s"+NL+"-]", abodtoday))
 	
 	if _, err := tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.ABookOfDaysTgChatId,
 		Text:   abodtoday,
-		
 		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 	}); err != nil {
 		return "", err
@@ -413,7 +415,7 @@ func PostABookOfDays(chatid string, daysoffset uint, last string, header bool) (
 	
 	last2 = monthday
 	if err := Config.Put(); err != nil {
-		return "", EF("ERROR Config.Put %w", err)
+		return "", EF("Config.Put %w", err)
 	}
 	
 	return last2, nil
@@ -431,7 +433,7 @@ func TgGetUpdates() (err error) {
 	var tgupdatesjson string
 	uu, tgupdatesjson, err = tg.GetUpdates(updatesoffset)
 	if err != nil {
-		return EF("tg.GetUpdates %v", err)
+		return EF("tg.GetUpdates %w", err)
 	}
 	
 	for _, u := range uu {
@@ -451,7 +453,7 @@ func TgGetUpdates() (err error) {
 			Config.TgUpdateLog = Config.TgUpdateLog[len(Config.TgUpdateLog)-Config.TgUpdateLogMaxSize:]
 		}
 		if err := Config.Put(); err != nil {
-			return EF("Config.Put %v", err)
+			return EF("Config.Put %w", err)
 		}
 		
 		var m tg.Message
@@ -474,7 +476,7 @@ func TgGetUpdates() (err error) {
 			}
 		}
 		if err := Config.Put(); err != nil {
-			return EF("Config.Put %v", err)
+			return EF("Config.Put %w", err)
 		}
 	}
 	
@@ -486,6 +488,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 	
 	m = u.Message
 	chatid := FI(m.From.Id, 10)
+	username := m.From.Username
 	if m.MessageId==0 {
 		return m, EF("unknown update")
 	}
@@ -496,6 +499,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		updated := false
 		for ic, _ := range Config.Chats {
 			if Config.Chats[ic].TgChatId == chatid {
+				Config.Chats[ic].TgUsername = username
 				Config.Chats[ic].DaysOffset = mar1daysoffset(time.Now().UTC())
 				//Config.Chats[ic].ABookOfDaysEnabled = true
 				//Config.Chats[ic].ABookOfDaysLast = ""
@@ -507,13 +511,14 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		if !updated {
 			Config.Chats = append(Config.Chats, TgPosterConfigChat{
 				TgChatId: chatid,
+				TgUsername: username,
 				DaysOffset: mar1daysoffset(time.Now().UTC()),
 				//ABookOfDaysEnabled: true,
 				ACourseInMiraclesWorkbookEnabled: true,
 			})
 		}
 		if err := Config.Put(); err != nil {
-			return m, EF("Config.Put %v", err)
+			return m, EF("Config.Put %w", err)
 		}
 		
 		tgmsg := (
@@ -543,7 +548,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 			}
 		}
 		if err := Config.Put(); err != nil {
-			return m, EF("Config.Put %v", err)
+			return m, EF("Config.Put %w", err)
 		}
 		tgmsg := tg.Esc("Stopped. To restart send ") + tg.Code("/start") + tg.Esc(".") + NL
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
@@ -599,7 +604,7 @@ func (config *TgPosterConfig) Get() error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return EF("yss response status %s", resp.Status)
+		return EF("yss response status [%s]", resp.Status)
 	}
 	
 	rbb, err := io.ReadAll(resp.Body)
@@ -636,7 +641,7 @@ func (config *TgPosterConfig) Put() error {
 		return err
 	}
 	if resp.StatusCode != 200 {
-		return EF("yss response status %s", resp.Status)
+		return EF("yss response status [%s]", resp.Status)
 	}
 	
 	return nil
