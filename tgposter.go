@@ -1,4 +1,4 @@
-// log( :328 :214 :199 :347 :166 :171 :484 :459 :511 :405 EF(
+// log( :328 :214 :199 :347 :166 :171 :484 :459 :511 :405 EF( EscExcept :401
 /*
 GoGet
 GoFmt
@@ -327,22 +327,21 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, 
 		}
 		
 		for i, sp := range spp {
-			message := sp
+			msg := sp
 			if i > 0 {
-				message = st + " (continued)\n\n" + sp
+				msg = st + " (continued)\n\n" + sp
 			}
 			
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
-			message = tg.EscExcept(message, "*_")
-			message = regexp.MustCompile("__+").ReplaceAllStringFunc(message, func(s string) string { return tg.Esc(s) })
+			msg= tg.EscExcept(msg, "*_")
+			msg = regexp.MustCompile("__+").ReplaceAllStringFunc(msg, func(s string) string { return tg.Esc(s) })
 			
 			perr(F("DEBUG PostACourseInMiraclesWorkbook  sending to chatid [%s]", chatid))
-			perr(F("DEBUG PostACourseInMiraclesWorkbook message [-"+NL+"%s"+NL+"-]", message))
+			perr(F("DEBUG PostACourseInMiraclesWorkbook msg [-"+NL+"%s"+NL+"-]", msg))
 			
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
 				ChatId: chatid,
-				Text:   message,
-				
+				Text:   msg,
 				LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 			}); err != nil {
 				return "", err
@@ -389,25 +388,24 @@ func PostABookOfDays(chatid string, daysoffset uint, last string, header bool) (
 	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
 		return "", err
 	}
-	abodtoday := ABookOfDaysRe.FindString(abod)
-	abodtoday = strings.TrimSpace(abodtoday)
-	if abodtoday == "" {
+	msg := ABookOfDaysRe.FindString(abod)
+	msg = strings.TrimSpace(msg)
+	if msg == "" {
 		perr("ERROR PostABookOfDays could not find A Book Of Days text for today")
 		return "", nil
 	}
 	
-	abodtoday = tg.EscExcept(abodtoday, "*_")
-	
 	if header {
-		abodtoday = "*A Book Of Days*" + NL + NL + abodtoday
-	}
+		msg = "*A Book Of Days*" + NL + NL + msg
+	}	
+	msg = tg.EscExcept(msg, "*_")
 	
 	perr(F("DEBUG PostABookOfDays sending to chatid [%s]", chatid))
-	perr(F("DEBUG PostABookOfDays message [-"+NL+"%s"+NL+"-]", abodtoday))
+	perr(F("DEBUG PostABookOfDays msg [-"+NL+"%s"+NL+"-]", msg))
 	
 	if _, err := tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.ABookOfDaysTgChatId,
-		Text:   abodtoday,
+		Text:   msg,
 		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
 	}); err != nil {
 		return "", err
