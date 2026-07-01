@@ -489,6 +489,9 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 	m = u.Message
 	chatid := FI(m.From.Id, 10)
 	username := m.From.Username
+	if username=="" {
+		username = "[" + m.From.FirstName + SP + m.From.LastName + "]"
+	}
 	if m.MessageId==0 {
 		return m, EF("unknown update")
 	}
