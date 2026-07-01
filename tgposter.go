@@ -522,7 +522,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		}
 		
 		tgmsg := (
-			tg.Esc("Hello, welcome! Here you have found ") + tg.Bold("A Course in Miracles Workbook") + tg.Esc(" in form of daily messages. When you start the bot, you start the course from day one. To stop receiving daily messages send ") + tg.Code("/stop") + tg.Esc(". Send ") + tg.Code("/start") + tg.Esc(" to restart the course from the beginning.") + 
+			tg.Esc("Hello, welcome! Here you have found ") + tg.Bold("A Course In Miracles Workbook") + tg.Esc(" in form of daily messages. When you start the bot, you start the course from day one. To stop receiving daily messages send ") + tg.Code("/stop") + tg.Esc(". Send ") + tg.Code("/start") + tg.Esc(" to restart the course from the beginning.") + 
 			NL + 
 			NL + 
 			tg.Esc("Peace and Love!") + 
