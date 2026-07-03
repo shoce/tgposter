@@ -565,9 +565,9 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		if FI(m.Chat.Id, 10) != Config.TgChatId {
 			return m, EF("not allowed command [%s]", m.Text)
 		}
-		tgmsg := tg.Esc("chats (") + NL
+		tgmsg := tg.Esc("Chats (") + NL
 		for _, c := range Config.Chats {
-			tgmsg += TAB + tg.Code(c.TgChatId) + SP + tg.Code(c.TgUsername) + NL
+			tgmsg += TAB + tg.Code(c.TgChatId) + SP + tg.Code(c.TgUsername) + SP + "DaysOffset<"+FI(int64(c.DaysOffset), 10)+">" + NL
 		}
 		tgmsg += tg.Esc(")")
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
