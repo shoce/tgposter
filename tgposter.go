@@ -497,11 +497,13 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 	switch m.Text {
 		
 	case "/start":
+		daysoffset := mar1daysoffset(time.Now().UTC())
+		tglog(F("INFO /start <%d> [%s] DaysOffset<%d>", chatid, username, daysoffset))
 		updated := false
 		for ic, _ := range Config.Chats {
 			if Config.Chats[ic].TgChatId == chatid {
 				Config.Chats[ic].TgUsername = username
-				Config.Chats[ic].DaysOffset = mar1daysoffset(time.Now().UTC())
+				Config.Chats[ic].DaysOffset = daysoffset
 				//Config.Chats[ic].ABookOfDaysEnabled = true
 				//Config.Chats[ic].ABookOfDaysLast = ""
 				Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = true
