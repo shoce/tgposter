@@ -1,4 +1,5 @@
-// log( :328 :214 :199 :347 :166 :171 :484 :459 :511 :405 EF( EscExcept :401
+// log( :328 :214 :199 :347 :166 :171 :484 :459 :511 :405 EF( EscExcept :401 :568
+// /start /stop /chats
 /*
 GoGet
 GoFmt
@@ -31,6 +32,7 @@ import (
 const (
 	N = ""
 	SP = " "
+	TAB = "\t"
 	NL = "\n"
 )
 
@@ -53,9 +55,7 @@ type TgPosterConfig struct {
 	YssUrl string `yaml:"-"`
 	
 	DEBUG bool `yaml:"DEBUG"`
-	
 	Interval time.Duration `yaml:"Interval"`
-	
 	TgApiUrlBase string `yaml:"TgApiUrlBase"` // "https://api.telegram.org"
 	
 	TgToken string `yaml:"TgToken"`
@@ -561,6 +561,24 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 			perr(F("ERROR tg.SendMessage %v", err))
 		}
 	
+	case "/chats":
+		if FI(m.Chat.Id, 10) != Config.TgChatId {
+			return m, EF("not allowed command [%s]", m.Text)
+		}
+		tgmsg := tg.Esc("chats (") + NL
+		for _, c := range Config.Chats {
+			tgmsg += TAB + tg.Code(c.TgChatId) + SP + tg.Code(c.TgUsername) + NL
+		}
+		tgmsg += tg.Esc(")")
+		if _, err := tg.SendMessage(tg.SendMessageRequest{
+			ChatId: FI(m.Chat.Id, 10),
+			Text: tgmsg,
+			DisableNotification: true,
+			LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
+		}); err!=nil {
+			perr(F("ERROR tg.SendMessage %v", err))
+		}
+	
 	default:
 		return m, EF("unknown command [%s]", m.Text)
 	
@@ -596,55 +614,28 @@ func tglog(msg string) (err error) {
 
 func (config *TgPosterConfig) Get() error {
 	req, err := http.NewRequest(http.MethodGet, config.YssUrl, nil)
-	if err != nil {
-		return err
-	}
-	
+	if err != nil { return err }
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		return EF("yss response status [%s]", resp.Status)
-	}
-	
+	if err != nil { return err }
+	if resp.StatusCode != 200 { return EF("yss response status [%s]", resp.Status) }
 	rbb, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	
-	if err := yaml.Unmarshal(rbb, config); err != nil {
-		return err
-	}
-	
+	if err != nil { return err }
+	if err := yaml.Unmarshal(rbb, config); err != nil { return err }
 	//perr(F("DEBUG Config.Get [-"+NL+"%s"+NL+"-]", rbb))
 	//perr(F("DEBUG Config.Get %+v", config))
-	
 	return nil
 }
 
 func (config *TgPosterConfig) Put() error {
 	//perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
-	
 	// https://pkg.go.dev/github.com/goccy/go-yaml#MarshalWithOptions
 	rbb, err := yaml.MarshalWithOptions(config, yaml.JSON(), yaml.Flow(false))
-	if err != nil {
-		return err
-	}
-	
+	if err != nil { return err }
 	req, err := http.NewRequest(http.MethodPut, config.YssUrl, bytes.NewBuffer(rbb))
-	if err != nil {
-		return err
-	}
-	
+	if err != nil { return err }
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		return EF("yss response status [%s]", resp.Status)
-	}
-	
+	if err != nil { return err }
+	if resp.StatusCode != 200 { return EF("yss response status [%s]", resp.Status) }
 	return nil
 }
 
