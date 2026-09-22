@@ -23,9 +23,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
 	yaml "github.com/goccy/go-yaml"
-
 	"github.com/shoce/tg"
 )
 
@@ -57,22 +55,20 @@ type TgPosterConfig struct {
 	DEBUG bool `yaml:"DEBUG"`
 	Interval time.Duration `yaml:"Interval"`
 	TgApiUrlBase string `yaml:"TgApiUrlBase"` // "https://api.telegram.org"
-	
 	TgToken string `yaml:"TgToken"`
 	TgUpdateLog []int64 `yaml:"TgUpdateLog,flow"`
 	TgUpdateLogMaxSize int `yaml:"TgUpdateLogMaxSize"` // 333
-	
 	TgChatId string `yaml:"TgChatId"`
 	PostingStartHour int `yaml:"PostingStartHour"`
 	
-	ABookOfDaysPath     string `yaml:"ABookOfDaysPath"`
+	ABookOfDaysPath string `yaml:"ABookOfDaysPath"`
 	ABookOfDaysTgChatId string `yaml:"ABookOfDaysTgChatId"`
-	ABookOfDaysLast     string `yaml:"ABookOfDaysLast"`
+	ABookOfDaysLast string `yaml:"ABookOfDaysLast"`
 	ABookOfDaysReTemplate string `yaml:"ABookOfDaysReTemplate"`
 	
-	ACourseInMiraclesWorkbookPath     string `yaml:"ACourseInMiraclesWorkbookPath"`
+	ACourseInMiraclesWorkbookPath string `yaml:"ACourseInMiraclesWorkbookPath"`
 	ACourseInMiraclesWorkbookTgChatId string `yaml:"ACourseInMiraclesWorkbookTgChatId"`
-	ACourseInMiraclesWorkbookLast     string `yaml:"ACourseInMiraclesWorkbookLast"`
+	ACourseInMiraclesWorkbookLast string `yaml:"ACourseInMiraclesWorkbookLast"`
 	ACourseInMiraclesWorkbookReString string `yaml:"ACourseInMiraclesWorkbookReString"`
 	
 	Chats []TgPosterConfigChat `yaml:"Chats"`
@@ -90,68 +86,49 @@ type TgPosterConfigChat struct {
 
 func init() {
 	var err error
-	
 	Ctx = context.TODO()
-	
-	if s := os.Getenv("YssUrl"); s != "" {
-		Config.YssUrl = s
-	}
-	if Config.YssUrl == "" {
+	if s := os.Getenv("YssUrl"); s!="" { Config.YssUrl = s }
+	if Config.YssUrl=="" {
 		perr("ERROR YssUrl empty")
 		os.Exit(1)
 	}
-	
-	if err := Config.Get(); err != nil {
+	if err := Config.Get(); err!=nil {
 		perr(F("ERROR Config.Get %v", err))
 		os.Exit(1)
 	}
-	
-	if Config.DEBUG {
-		perr("DEBUG <true>")
-	}
-	
+	if Config.DEBUG { perr("DEBUG <true>") }
 	perr(F("Interval <%v>", Config.Interval))
-	if Config.Interval == 0 {
+	if Config.Interval==0 {
 		perr("ERROR Interval empty")
 		os.Exit(1)
 	}
-	
-	if Config.TgToken == "" {
+	if Config.TgToken=="" {
 		perr("ERROR TgToken empty")
 		os.Exit(1)
 	}
-	
 	tg.ApiToken = Config.TgToken
-	
-	if Config.TgUpdateLogMaxSize <= 0 {
-		Config.TgUpdateLogMaxSize = 333
-	}
-	
-	if Config.TgChatId == "" {
+	if Config.TgUpdateLogMaxSize<=0 { Config.TgUpdateLogMaxSize = 333 }
+	if Config.TgChatId=="" {
 		perr("ERROR TgChatId empty")
 		os.Exit(1)
 	}
-	
-	if Config.PostingStartHour < 0 || Config.PostingStartHour > 23 {
+	if Config.PostingStartHour<0 || Config.PostingStartHour>23 {
 		perr(F("ERROR invalid PostingStartHour <%d> must be between <0> and <23>", Config.PostingStartHour))
 		os.Exit(1)
 	}
-	
-	if Config.ABookOfDaysReTemplate == "" && Config.ABookOfDaysPath != "" {
+	if Config.ABookOfDaysReTemplate=="" && Config.ABookOfDaysPath!="" {
 		perr("ERROR ABookOfDaysReTemplate is empty")
 		os.Exit(1)
 	}
-	
-	if Config.ABookOfDaysTgChatId == "" && Config.ABookOfDaysPath != "" {
+	if Config.ABookOfDaysTgChatId=="" && Config.ABookOfDaysPath!="" {
 		perr("ERROR ABookOfDaysTgChatId is empty")
 		os.Exit(1)
 	}
-	
-	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(Config.ACourseInMiraclesWorkbookReString); err != nil {
+	if ACourseInMiraclesWorkbookRe, err = regexp.Compile(Config.ACourseInMiraclesWorkbookReString); err!=nil {
 		perr(F("ERROR invalid ACourseInMiraclesWorkbookReString `%s`: %v", Config.ACourseInMiraclesWorkbookReString, err))
 		os.Exit(1)
 	}
-	if Config.ACourseInMiraclesWorkbookTgChatId == "" && Config.ACourseInMiraclesWorkbookPath != "" {
+	if Config.ACourseInMiraclesWorkbookTgChatId=="" && Config.ACourseInMiraclesWorkbookPath!="" {
 		perr("ACourseInMiraclesWorkbookTgChatId is empty")
 		os.Exit(1)
 	}
@@ -176,7 +153,7 @@ func main() {
 
 		t0 = time.Now()
 
-		if err := TgGetUpdates(); err != nil {
+		if err := TgGetUpdates(); err!=nil {
 			perr(F("ERROR TgGetUpdates %v", err))
 		}
 
@@ -185,20 +162,20 @@ func main() {
 		last = Config.ABookOfDaysLast
 		if last2, err := PostABookOfDays(chatid, daysoffset, last, false); err != nil {
 			tglog(F("ERROR PostABookOfDays %v", err))
-		} else if last2!="" && last2!=last {
+		} else if last2!="" && last2 != last {
 			Config.ABookOfDaysLast = last2
-			if err := Config.Put(); err != nil {
+			if err := Config.Put(); err!=nil {
 				perr(F("ERROR Config.Put %v", err))
 			}
 		}
 
 		chatid = Config.ACourseInMiraclesWorkbookTgChatId
 		last = Config.ACourseInMiraclesWorkbookLast
-		if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, false); err != nil {
+		if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, false); err!=nil {
 			tglog(F("ERROR PostACourseInMiraclesWorkbook %v", err))
-		} else if last2!="" && last2!=last {
+		} else if last2!="" && last2 != last {
 			Config.ACourseInMiraclesWorkbookLast = last2
-			if err := Config.Put(); err != nil {
+			if err := Config.Put(); err!=nil {
 				perr(F("ERROR Config.Put %v", err))
 			}
 		}
@@ -219,11 +196,11 @@ func main() {
 			}
 			if Config.Chats[ic].ACourseInMiraclesWorkbookEnabled {
 				last = Config.Chats[ic].ACourseInMiraclesWorkbookLast
-				if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, true); err != nil {
-					tglog(F("ERROR PostACourseInMiraclesWorkbook [%s] %v", chatid, err))
-				} else if last2!="" && last2!=last {
+				if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, true); err!=nil {
+					tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %#v", chatid, err))
+				} else if last2!="" && last2 != last {
 					Config.Chats[ic].ACourseInMiraclesWorkbookLast = last2
-					if err := Config.Put(); err != nil {
+					if err := Config.Put(); err!=nil {
 						perr(F("ERROR Config.Put %v", err))
 					}
 				}
@@ -232,7 +209,7 @@ func main() {
 		
 		for time.Now().Sub(t0) < Config.Interval {
 			time.Sleep(77*time.Second)
-			if err := TgGetUpdates(); err != nil {
+			if err := TgGetUpdates(); err!=nil {
 				perr(F("ERROR TgGetUpdates %v", err))
 			}
 		}
@@ -252,31 +229,20 @@ func mar1daysoffset(t time.Time) uint {
 
 func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, header bool) (last2 string, err error) {
 	if chatid=="" { return }
-	if Config.ACourseInMiraclesWorkbookPath == "" { return }
+	if Config.ACourseInMiraclesWorkbookPath=="" { return }
 	tnow := time.Now().UTC()
 	if tnow.Hour() < Config.PostingStartHour { return }
-
-	if	daysoffset==mar1daysoffset(tnow) {
-		if last != "* LESSON 1 *" {
-			last = ""
-		}
+	if daysoffset==mar1daysoffset(tnow) {
+		if last != "* LESSON 1 *" { last = "" }
 	}
-
 	daynum := mar1daysoffset(tnow) + 1 - daysoffset 
 	daynums := F(" %d ", daynum)
-
 	perr(F("DEBUG PostACourseInMiraclesWorkbook daysoffset <%d> daynum <%d>", daysoffset, daynum))
-
 	acimwbbb, err := ioutil.ReadFile(Config.ACourseInMiraclesWorkbookPath)
-	if err != nil {
-		return "", EF("ReadFile ACourseInMiraclesWorkbookPath [%s] %w", Config.ACourseInMiraclesWorkbookPath, err)
-	}
+	if err!=nil { return "", EF("ReadFile ACourseInMiraclesWorkbookPath [%s] %w", Config.ACourseInMiraclesWorkbookPath, err) }
 	acimwb := string(acimwbbb)
-	if acimwb == "" {
-		return "", EF("empty file ACourseInMiraclesWorkbookPath [%s]", Config.ACourseInMiraclesWorkbookPath)
-	}
+	if acimwb=="" { return "", EF("empty file ACourseInMiraclesWorkbookPath [%s]", Config.ACourseInMiraclesWorkbookPath) }
 	acimwbss := strings.Split(acimwb, NL+NL+NL+NL)
-
 	/*
 		var longis []string
 		for _, t := range acimwbss {
@@ -287,30 +253,17 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, 
 		}
 		perr(F("DEBUG PostACourseInMiraclesWorkbook texts len<4000>+ [%s]", strings.Join(longis, "], [")))
 	*/
-
-	if strings.Contains(last, daynums) {
-		return "", nil
-	}
-
+	if strings.Contains(last, daynums) { return "", nil }
 	var skip bool
-	if last != "" {
-		skip = true
-	}
-
+	if last!="" { skip = true }
 	for _, s := range acimwbss {
 		st := strings.Split(s, NL)[0]
 		if st == last {
 			skip = false
 			continue
 		}
-		if skip {
-			continue
-		}
-		
-		if header {
-			s = "*A Course In Miracles Workbook*" + NL + NL + s
-		}
-		
+		if skip { continue } 
+		if header { s = "*A Course In Miracles Workbook*" + NL + NL + s } 
 		var spp []string
 		if len(s) < 4000 {
 			spp = append(spp, s)
@@ -325,36 +278,23 @@ func PostACourseInMiraclesWorkbook(chatid string, daysoffset uint, last string, 
 				}
 			}
 		}
-		
 		for i, sp := range spp {
 			msg := sp
-			if i > 0 {
-				msg = st + " (continued)\n\n" + sp
-			}
-			
+			if i > 0 { msg = st + " (continued)\n\n" + sp } 
 			// https://pkg.go.dev/regexp#Regexp.ReplaceAllStringFunc
 			msg= tg.EscExcept(msg, "*_")
 			msg = regexp.MustCompile("__+").ReplaceAllStringFunc(msg, func(s string) string { return tg.Esc(s) })
-			
 			perr(F("DEBUG PostACourseInMiraclesWorkbook  sending to chatid [%s]", chatid))
 			perr(F("DEBUG PostACourseInMiraclesWorkbook msg [-"+NL+"%s"+NL+"-]", msg))
-			
 			if _, err := tg.SendMessage(tg.SendMessageRequest{
 				ChatId: chatid,
-				Text:   msg,
+				Text: msg,
 				LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
-			}); err != nil {
-				return "", err
-			}
+			}); err!=nil { return "", err }
 		}
-		
 		last2 = st
-		
-		if ACourseInMiraclesWorkbookRe.MatchString(st) {
-			break
-		}
+		if ACourseInMiraclesWorkbookRe.MatchString(st) { break }
 	}
-	
 	return last2, nil
 }
 
@@ -363,77 +303,48 @@ func PostABookOfDays(chatid string, daysoffset uint, last string, header bool) (
 	if Config.ABookOfDaysPath == "" { return }
 	tnow := time.Now().UTC()
 	if tnow.Hour() < Config.PostingStartHour { return }
-	
-	if Config.ABookOfDaysReTemplate == "" {
-		return "", EF("ABookOfDaysReTemplate is empty")
-	}
-	
+	if Config.ABookOfDaysReTemplate == "" { return "", EF("ABookOfDaysReTemplate is empty") }
 	abodbb, err := ioutil.ReadFile(Config.ABookOfDaysPath)
-	if err != nil {
-		return "", EF("ReadFile ABookOfDaysPath [%s] %w", Config.ABookOfDaysPath, err)
-	}
+	if err!=nil { return "", EF("ReadFile ABookOfDaysPath [%s] %w", Config.ABookOfDaysPath, err) }
 	abod := strings.TrimSpace(string(abodbb))
-	if abod == "" {
-		return "", EF("empty file ABookOfDaysPath [%s]", Config.ABookOfDaysPath)
-	}
-	
+	if abod=="" { return "", EF("empty file ABookOfDaysPath [%s]", Config.ABookOfDaysPath) } 
 	tnow = tnow.Add(time.Duration(daysoffset*24)*time.Hour)
 	monthday := tnow.Format("January 2")
 	perr(F("DEBUG PostABookOfDays daysoffset <%d> monthday [%s]", daysoffset, monthday))
-	
 	if monthday == last { return "", nil }
-	
 	abookofdaysre := strings.ReplaceAll(Config.ABookOfDaysReTemplate, "monthday", monthday)
 	perr(F("DEBUG PostABookOfDays abookofdaysre [%s]", abookofdaysre))
-	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err != nil {
-		return "", err
-	}
+	if ABookOfDaysRe, err = regexp.Compile(abookofdaysre); err!=nil { return "", err }
 	msg := ABookOfDaysRe.FindString(abod)
 	msg = strings.TrimSpace(msg)
-	if msg == "" {
+	if msg=="" {
 		perr("ERROR PostABookOfDays could not find A Book Of Days text for today")
 		return "", nil
 	}
-	
-	if header {
-		msg = "*A Book Of Days*" + NL + NL + msg
-	}	
+	if header { msg = "*A Book Of Days*" + NL + NL + msg }
 	msg = tg.EscExcept(msg, "*_")
-	
 	perr(F("DEBUG PostABookOfDays sending to chatid [%s]", chatid))
 	perr(F("DEBUG PostABookOfDays msg [-"+NL+"%s"+NL+"-]", msg))
-	
 	if _, err := tg.SendMessage(tg.SendMessageRequest{
 		ChatId: Config.ABookOfDaysTgChatId,
 		Text:   msg,
 		LinkPreviewOptions: tg.LinkPreviewOptions{IsDisabled: true},
-	}); err != nil {
-		return "", err
-	}
-	
+	}); err!=nil { return "", err }
 	last2 = monthday
-	if err := Config.Put(); err != nil {
-		return "", EF("Config.Put %w", err)
-	}
-	
+	if err := Config.Put(); err != nil { return "", EF("Config.Put %w", err) }
 	return last2, nil
 }
 
 func TgGetUpdates() (err error) {
 	
 	var updatesoffset int64
-	
-	if len(Config.TgUpdateLog) > 0 {
+	if len(Config.TgUpdateLog)>0 {
 		updatesoffset = Config.TgUpdateLog[len(Config.TgUpdateLog)-1] + 1
 	}
-	
 	var uu []tg.Update
 	var tgupdatesjson string
 	uu, tgupdatesjson, err = tg.GetUpdates(updatesoffset)
-	if err != nil {
-		return EF("tg.GetUpdates %w", err)
-	}
-	
+	if err!=nil { return EF("tg.GetUpdates %w", err) }
 	for _, u := range uu {
 		//perr("DEBUG Update" + SP + strings.ReplaceAll(F("%+v", u), NL, "<NL>"))
 		/*
@@ -450,17 +361,14 @@ func TgGetUpdates() (err error) {
 		if len(Config.TgUpdateLog) > Config.TgUpdateLogMaxSize {
 			Config.TgUpdateLog = Config.TgUpdateLog[len(Config.TgUpdateLog)-Config.TgUpdateLogMaxSize:]
 		}
-		if err := Config.Put(); err != nil {
-			return EF("Config.Put %w", err)
-		}
-		
+		if err := Config.Put(); err!=nil { return EF("Config.Put %w", err) }
 		var m tg.Message
-		if m, err = processTgUpdate(u, tgupdatesjson); err == nil {
+		if m, err = processTgUpdate(u, tgupdatesjson); err==nil {
 			if tgerr := tg.SetMessageReaction(tg.SetMessageReactionRequest{
 				ChatId:    FI(m.Chat.Id, 10),
 				MessageId: m.MessageId,
 				Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "👌"}},
-			}); tgerr != nil {
+			}); tgerr!=nil {
 				perr(F("ERROR tg.SetMessageReaction [👌] %v", tgerr))
 			}
 		} else {
@@ -469,11 +377,11 @@ func TgGetUpdates() (err error) {
 				ChatId:    FI(m.Chat.Id, 10),
 				MessageId: m.MessageId,
 				Reaction:  []tg.ReactionTypeEmoji{tg.ReactionTypeEmoji{Emoji: "😭"}},
-			}); tgerr != nil {
+			}); tgerr!=nil {
 				perr(F("ERROR tg.SetMessageReaction [😭] %v", tgerr))
 			}
 		}
-		if err := Config.Put(); err != nil {
+		if err := Config.Put(); err!=nil {
 			return EF("Config.Put %w", err)
 		}
 	}
@@ -520,7 +428,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 				ACourseInMiraclesWorkbookEnabled: true,
 			})
 		}
-		if err := Config.Put(); err != nil {
+		if err := Config.Put(); err!=nil {
 			return m, EF("Config.Put %w", err)
 		}
 		
@@ -550,9 +458,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 				Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = false
 			}
 		}
-		if err := Config.Put(); err != nil {
-			return m, EF("Config.Put %w", err)
-		}
+		if err := Config.Put(); err!=nil { return m, EF("Config.Put %w", err) }
 		tgmsg := tg.Esc("Stopped. To restart send ") + tg.Code("/start") + tg.Esc(".") + NL
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: FI(m.Chat.Id, 10),
@@ -598,8 +504,8 @@ func ts() string {
 	)
 }
 
-func perr(msg string) {
-	fmt.Fprint(os.Stderr, ts()+SP+msg+NL)
+func perr(msg string) (int, error) {
+	return fmt.Fprint(os.Stderr, ts()+SP+msg+NL)
 }
 
 func tglog(msg string) (err error) {
@@ -616,13 +522,13 @@ func tglog(msg string) (err error) {
 
 func (config *TgPosterConfig) Get() error {
 	req, err := http.NewRequest(http.MethodGet, config.YssUrl, nil)
-	if err != nil { return err }
+	if err!=nil { return err }
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil { return err }
-	if resp.StatusCode != 200 { return EF("yss response status [%s]", resp.Status) }
+	if err!=nil { return err }
+	if resp.StatusCode!=200 { return EF("yss response status [%s]", resp.Status) }
 	rbb, err := io.ReadAll(resp.Body)
-	if err != nil { return err }
-	if err := yaml.Unmarshal(rbb, config); err != nil { return err }
+	if err!=nil { return err }
+	if err := yaml.Unmarshal(rbb, config); err!=nil { return err }
 	//perr(F("DEBUG Config.Get [-"+NL+"%s"+NL+"-]", rbb))
 	//perr(F("DEBUG Config.Get %+v", config))
 	return nil
@@ -632,12 +538,12 @@ func (config *TgPosterConfig) Put() error {
 	//perr(F("DEBUG Config.Put %s %+v", config.YssUrl, config))
 	// https://pkg.go.dev/github.com/goccy/go-yaml#MarshalWithOptions
 	rbb, err := yaml.MarshalWithOptions(config, yaml.JSON(), yaml.Flow(false))
-	if err != nil { return err }
+	if err!=nil { return err }
 	req, err := http.NewRequest(http.MethodPut, config.YssUrl, bytes.NewBuffer(rbb))
-	if err != nil { return err }
+	if err!=nil { return err }
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil { return err }
-	if resp.StatusCode != 200 { return EF("yss response status [%s]", resp.Status) }
+	if err!=nil { return err }
+	if resp.StatusCode!=200 { return EF("yss response status [%s]", resp.Status) }
 	return nil
 }
 
