@@ -192,9 +192,7 @@ func main() {
 					tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %s", chatid, err))
 					if err.Error()=="sendMessage Forbidden: bot was blocked by the user" {
 						if ccderr := ConfigChatsDisable(FI(int64(ic), 10)); ccderr!=nil {
-							tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] ConfigChatsDisable %v", chatid, ccderr))
-						} else {
-							tglog(F("INFO PostACourseInMiraclesWorkbook chatid[%s] disabled", chatid))
+							tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %v", chatid, ccderr))
 						}
 					}
 				} else if last2!="" && last2 != last {
@@ -481,13 +479,17 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 }
 
 func ConfigChatsDisable(chatid string) error {
+	var found bool
 	for ic, _ := range Config.Chats {
 		if Config.Chats[ic].TgChatId == chatid {
+			found = true
 			Config.Chats[ic].ABookOfDaysEnabled = false
 			Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = false
 		}
 	}
+	if !found { return EF("ConfigChatsDisable chatid[%s] not found", chatid) }
 	if err := Config.Put(); err!=nil { return EF("Config.Put %w", err) }
+	tglog(F("INFO ConfigChatsDisable chatid[%s] disabled", chatid))
 	return nil
 }
 
