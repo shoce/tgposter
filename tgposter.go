@@ -194,7 +194,7 @@ func main() {
 						if ccderr := ConfigChatsDisable(FI(int64(ic), 10)); ccderr!=nil {
 							tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] ConfigChatsDisable %v", chatid, ccderr))
 						} else {
-							tglog(F("INFO PostACourseInMiraclesWorkbook chatid[%s] disabled", chatid, ccderr))
+							tglog(F("INFO PostACourseInMiraclesWorkbook chatid[%s] disabled", chatid))
 						}
 					}
 				} else if last2!="" && last2 != last {
