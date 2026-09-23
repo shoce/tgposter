@@ -153,9 +153,7 @@ func main() {
 
 		t0 = time.Now()
 
-		if err := TgGetUpdates(); err!=nil {
-			perr(F("ERROR TgGetUpdates %v", err))
-		}
+		if err := TgGetUpdates(); err!=nil { perr(F("ERROR TgGetUpdates %v", err)) }
 
 		chatid = Config.ABookOfDaysTgChatId
 		daysoffset = 0
@@ -164,9 +162,7 @@ func main() {
 			tglog(F("ERROR PostABookOfDays %v", err))
 		} else if last2!="" && last2 != last {
 			Config.ABookOfDaysLast = last2
-			if err := Config.Put(); err!=nil {
-				perr(F("ERROR Config.Put %v", err))
-			}
+			if err := Config.Put(); err!=nil { perr(F("ERROR Config.Put %v", err)) }
 		}
 
 		chatid = Config.ACourseInMiraclesWorkbookTgChatId
@@ -175,9 +171,7 @@ func main() {
 			tglog(F("ERROR PostACourseInMiraclesWorkbook %v", err))
 		} else if last2!="" && last2 != last {
 			Config.ACourseInMiraclesWorkbookLast = last2
-			if err := Config.Put(); err!=nil {
-				perr(F("ERROR Config.Put %v", err))
-			}
+			if err := Config.Put(); err!=nil { perr(F("ERROR Config.Put %v", err)) }
 		}
 
 		for ic := range Config.Chats {
@@ -187,31 +181,32 @@ func main() {
 				last = Config.Chats[ic].ABookOfDaysLast
 				if last2, err := PostABookOfDays(chatid, daysoffset, last, true); err != nil {
 					tglog(F("ERROR PostABookOfDays [%s] %v", chatid, err))
-				} else if last2!="" && last2!=last {
+				} else if last2!="" && last2 != last {
 					Config.Chats[ic].ABookOfDaysLast = last2
-					if err := Config.Put(); err != nil {
-						perr(F("ERROR Config.Put %v", err))
-					}
+					if err := Config.Put(); err!=nil { perr(F("ERROR Config.Put %v", err)) }
 				}
 			}
 			if Config.Chats[ic].ACourseInMiraclesWorkbookEnabled {
 				last = Config.Chats[ic].ACourseInMiraclesWorkbookLast
 				if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, true); err!=nil {
-					tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %#v", chatid, err))
+					tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %s", chatid, err))
+					if err.Error()=="sendMessage Forbidden: bot was blocked by the user" {
+						if ccderr := ConfigChatsDisable(FI(int64(ic), 10)); ccderr!=nil {
+							tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] ConfigChatsDisable %v", chatid, ccderr))
+						} else {
+							tglog(F("INFO PostACourseInMiraclesWorkbook chatid[%s] disabled", chatid, ccderr))
+						}
+					}
 				} else if last2!="" && last2 != last {
 					Config.Chats[ic].ACourseInMiraclesWorkbookLast = last2
-					if err := Config.Put(); err!=nil {
-						perr(F("ERROR Config.Put %v", err))
-					}
+					if err := Config.Put(); err!=nil { perr(F("ERROR Config.Put %v", err)) }
 				}
 			}
 		}
 		
 		for time.Now().Sub(t0) < Config.Interval {
 			time.Sleep(77*time.Second)
-			if err := TgGetUpdates(); err!=nil {
-				perr(F("ERROR TgGetUpdates %v", err))
-			}
+			if err := TgGetUpdates(); err!=nil { perr(F("ERROR TgGetUpdates %v", err)) }
 		}
 		
 	}
@@ -398,9 +393,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 	if username=="" {
 		username = "[" + m.From.FirstName + SP + m.From.LastName + "]"
 	}
-	if m.MessageId==0 {
-		return m, EF("unknown update")
-	}
+	if m.MessageId==0 { return m, EF("unknown update") }
 	perr(F("DEBUG Message %v", m))
 	switch m.Text {
 		
@@ -428,9 +421,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 				ACourseInMiraclesWorkbookEnabled: true,
 			})
 		}
-		if err := Config.Put(); err!=nil {
-			return m, EF("Config.Put %w", err)
-		}
+		if err := Config.Put(); err!=nil { return m, EF("Config.Put %w", err) }
 		
 		tgmsg := (
 			tg.Esc("Hello, welcome! Here you have found ") + tg.Bold("A Course In Miracles Workbook") + tg.Esc(" in form of daily messages. When you start the bot, you start the course from day one. To stop receiving daily messages send ") + tg.Code("/stop") + tg.Esc(". Send ") + tg.Code("/start") + tg.Esc(" to restart the course from the beginning.") + 
@@ -452,13 +443,7 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 		}
 	
 	case "/stop":
-		for ic, _ := range Config.Chats {
-			if Config.Chats[ic].TgChatId == chatid {
-				Config.Chats[ic].ABookOfDaysEnabled = false
-				Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = false
-			}
-		}
-		if err := Config.Put(); err!=nil { return m, EF("Config.Put %w", err) }
+		if err := ConfigChatsDisable(FI(m.Chat.Id, 10)); err!=nil { return m, err }
 		tgmsg := tg.Esc("Stopped. To restart send ") + tg.Code("/start") + tg.Esc(".") + NL
 		if _, err := tg.SendMessage(tg.SendMessageRequest{
 			ChatId: FI(m.Chat.Id, 10),
@@ -493,6 +478,17 @@ func processTgUpdate(u tg.Update, tgupdatesjson string) (m tg.Message, err error
 	}
 	
 	return
+}
+
+func ConfigChatsDisable(chatid string) error {
+	for ic, _ := range Config.Chats {
+		if Config.Chats[ic].TgChatId == chatid {
+			Config.Chats[ic].ABookOfDaysEnabled = false
+			Config.Chats[ic].ACourseInMiraclesWorkbookEnabled = false
+		}
+	}
+	if err := Config.Put(); err!=nil { return EF("Config.Put %w", err) }
+	return nil
 }
 
 func ts() string {
