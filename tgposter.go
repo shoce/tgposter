@@ -51,7 +51,6 @@ var (
 
 type TgPosterConfig struct {
 	YssUrl string `yaml:"-"`
-	
 	DEBUG bool `yaml:"DEBUG"`
 	Interval time.Duration `yaml:"Interval"`
 	TgApiUrlBase string `yaml:"TgApiUrlBase"` // "https://api.telegram.org"
@@ -60,17 +59,14 @@ type TgPosterConfig struct {
 	TgUpdateLogMaxSize int `yaml:"TgUpdateLogMaxSize"` // 333
 	TgChatId string `yaml:"TgChatId"`
 	PostingStartHour int `yaml:"PostingStartHour"`
-	
 	ABookOfDaysPath string `yaml:"ABookOfDaysPath"`
 	ABookOfDaysTgChatId string `yaml:"ABookOfDaysTgChatId"`
 	ABookOfDaysLast string `yaml:"ABookOfDaysLast"`
 	ABookOfDaysReTemplate string `yaml:"ABookOfDaysReTemplate"`
-	
 	ACourseInMiraclesWorkbookPath string `yaml:"ACourseInMiraclesWorkbookPath"`
 	ACourseInMiraclesWorkbookTgChatId string `yaml:"ACourseInMiraclesWorkbookTgChatId"`
 	ACourseInMiraclesWorkbookLast string `yaml:"ACourseInMiraclesWorkbookLast"`
 	ACourseInMiraclesWorkbookReString string `yaml:"ACourseInMiraclesWorkbookReString"`
-	
 	Chats []TgPosterConfigChat `yaml:"Chats"`
 }
 
@@ -191,7 +187,7 @@ func main() {
 				if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, true); err!=nil {
 					tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %s", chatid, err))
 					if err.Error()=="sendMessage Forbidden: bot was blocked by the user" {
-						if ccderr := ConfigChatsDisable(FI(int64(ic), 10)); ccderr!=nil {
+						if ccderr := ConfigChatsDisable(FI(chatid, 10)); ccderr!=nil {
 							tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %v", chatid, ccderr))
 						}
 					}
@@ -489,7 +485,7 @@ func ConfigChatsDisable(chatid string) error {
 	}
 	if !found { return EF("ConfigChatsDisable chatid[%s] not found", chatid) }
 	if err := Config.Put(); err!=nil { return EF("Config.Put %w", err) }
-	tglog(F("INFO ConfigChatsDisable chatid[%s] disabled", chatid))
+	tglog(F("INFO ConfigChatsDisable chatid[%s] found and disabled", chatid))
 	return nil
 }
 
