@@ -173,6 +173,7 @@ func main() {
 		for ic := range Config.Chats {
 			chatid = Config.Chats[ic].TgChatId
 			daysoffset = Config.Chats[ic].DaysOffset
+			
 			if Config.Chats[ic].ABookOfDaysEnabled {
 				last = Config.Chats[ic].ABookOfDaysLast
 				if last2, err := PostABookOfDays(chatid, daysoffset, last, true); err != nil {
@@ -182,12 +183,13 @@ func main() {
 					if err := Config.Put(); err!=nil { perr(F("ERROR Config.Put %v", err)) }
 				}
 			}
+			
 			if Config.Chats[ic].ACourseInMiraclesWorkbookEnabled {
 				last = Config.Chats[ic].ACourseInMiraclesWorkbookLast
 				if last2, err := PostACourseInMiraclesWorkbook(chatid, daysoffset, last, true); err!=nil {
 					tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %s", chatid, err))
 					if err.Error()=="sendMessage Forbidden: bot was blocked by the user" {
-						if ccderr := ConfigChatsDisable(FI(chatid, 10)); ccderr!=nil {
+						if ccderr := ConfigChatsDisable(chatid); ccderr!=nil {
 							tglog(F("ERROR PostACourseInMiraclesWorkbook chatid[%s] %v", chatid, ccderr))
 						}
 					}
